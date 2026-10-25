@@ -1,78 +1,92 @@
 package com.example.onlineshop;
 
-import com.example.onlineshop.dto.UserDTO;
-import com.example.onlineshop.dto.CartDTO;
-import com.example.onlineshop.dto.CartItemRequestDTO;
-import com.example.onlineshop.dto.AddressDTO;
-import com.example.onlineshop.dto.BrandDTO;
-import com.example.onlineshop.dto.CouponDTO;
-import com.example.onlineshop.dto.TaxRuleDTO;
-import com.example.onlineshop.dto.ShippingZoneDTO;
-import com.example.onlineshop.dto.AdminShippingMethodDTO;
-import com.example.onlineshop.dto.InventoryDTO;
-import com.example.onlineshop.dto.AdminInventoryDTO;
-import com.example.onlineshop.dto.InventoryMovementDTO;
-import com.example.onlineshop.dto.CategoryDTO;
-import com.example.onlineshop.dto.CheckoutQuoteDTO;
-import com.example.onlineshop.dto.CheckoutQuoteRequestDTO;
-import com.example.onlineshop.dto.CouponValidationDTO;
-import com.example.onlineshop.dto.CouponValidationRequestDTO;
-import com.example.onlineshop.dto.BannerDTO;
-import com.example.onlineshop.dto.BannerUpdateDTO;
-import com.example.onlineshop.dto.FeaturedCollectionDTO;
-import com.example.onlineshop.dto.FeaturedCollectionUpdateDTO;
-import com.example.onlineshop.dto.ProductDTO;
-import com.example.onlineshop.dto.CategoryAttributeDTO;
-import com.example.onlineshop.dto.ImageUpdateDTO;
-import com.example.onlineshop.dto.VariantCreateDTO;
-import com.example.onlineshop.dto.VariantUpdateDTO;
-import com.example.onlineshop.dto.SKUDTO;
-import com.example.onlineshop.model.Address;
-import com.example.onlineshop.model.CategoryAttribute;
-import com.example.onlineshop.model.Brand;
-import com.example.onlineshop.model.Category;
-import com.example.onlineshop.model.Cart;
-import com.example.onlineshop.model.CartItem;
-import com.example.onlineshop.model.Banner;
-import com.example.onlineshop.model.FeaturedCollection;
-import com.example.onlineshop.model.Inventory;
-import com.example.onlineshop.model.InventoryMovement;
-import com.example.onlineshop.model.Image;
-import com.example.onlineshop.model.Product;
-import com.example.onlineshop.model.Review;
-import com.example.onlineshop.model.Role;
-import com.example.onlineshop.model.SKU;
-import com.example.onlineshop.model.TokenSession;
-import com.example.onlineshop.model.TaxRule;
-import com.example.onlineshop.model.ShippingZone;
-import com.example.onlineshop.model.ShippingMethod;
-import com.example.onlineshop.model.User;
-import com.example.onlineshop.model.WishList;
-import com.example.onlineshop.repository.AddressRepository;
-import com.example.onlineshop.repository.CartRepository;
-import com.example.onlineshop.repository.CartItemRepository;
-import com.example.onlineshop.repository.BrandRepository;
-import com.example.onlineshop.repository.BannerRepository;
-import com.example.onlineshop.repository.FeaturedCollectionRepository;
-import com.example.onlineshop.repository.CategoryRepository;
-import com.example.onlineshop.repository.CategoryAttributeRepository;
-import com.example.onlineshop.repository.ProductRepository;
-import com.example.onlineshop.repository.SKURepository;
-import com.example.onlineshop.repository.InventoryRepository;
-import com.example.onlineshop.repository.InventoryMovementRepository;
-import com.example.onlineshop.repository.ImageRepository;
-import com.example.onlineshop.repository.ReviewRepository;
-import com.example.onlineshop.repository.RoleRepository;
-import com.example.onlineshop.repository.TokenSessionRepository;
-import com.example.onlineshop.repository.UserRepository;
+import com.example.onlineshop.user.dto.UserDTO;
+import com.example.onlineshop.cart.dto.CartDTO;
+import com.example.onlineshop.cart.dto.CartItemRequestDTO;
+import com.example.onlineshop.order.dto.AddressDTO;
+import com.example.onlineshop.product.dto.BrandDTO;
+import com.example.onlineshop.promotion.dto.CouponDTO;
+import com.example.onlineshop.shipping.dto.TaxRuleDTO;
+import com.example.onlineshop.shipping.dto.ShippingZoneDTO;
+import com.example.onlineshop.shipping.dto.AdminShippingMethodDTO;
+import com.example.onlineshop.product.dto.InventoryDTO;
+import com.example.onlineshop.product.dto.AdminInventoryDTO;
+import com.example.onlineshop.product.dto.InventoryMovementDTO;
+import com.example.onlineshop.product.dto.CategoryDTO;
+import com.example.onlineshop.order.dto.CheckoutQuoteDTO;
+import com.example.onlineshop.order.dto.CheckoutQuoteRequestDTO;
+import com.example.onlineshop.order.dto.CouponValidationDTO;
+import com.example.onlineshop.order.dto.CouponValidationRequestDTO;
+import com.example.onlineshop.order.dto.OrderRequestDTO;
+import com.example.onlineshop.order.dto.OrderDTO;
+import com.example.onlineshop.order.dto.OrderReceiptDTO;
+import com.example.onlineshop.order.dto.ReorderResultDTO;
+import com.example.onlineshop.order.dto.MockPaymentCompletionDTO;
+import com.example.onlineshop.order.dto.MockPaymentCompletionRequest;
+import com.example.onlineshop.order.dto.GuestOrderLookupRequest;
+import com.example.onlineshop.order.dto.GuestOrderLookupVerifyRequest;
+import com.example.onlineshop.order.dto.GuestOrderClaimRequest;
+import com.example.onlineshop.content.dto.BannerDTO;
+import com.example.onlineshop.content.dto.BannerUpdateDTO;
+import com.example.onlineshop.content.dto.FeaturedCollectionDTO;
+import com.example.onlineshop.content.dto.FeaturedCollectionUpdateDTO;
+import com.example.onlineshop.product.dto.ProductDTO;
+import com.example.onlineshop.product.dto.CategoryAttributeDTO;
+import com.example.onlineshop.product.dto.ImageUpdateDTO;
+import com.example.onlineshop.product.dto.VariantCreateDTO;
+import com.example.onlineshop.product.dto.VariantUpdateDTO;
+import com.example.onlineshop.product.dto.SKUDTO;
+import com.example.onlineshop.order.entity.Address;
+import com.example.onlineshop.product.entity.CategoryAttribute;
+import com.example.onlineshop.product.entity.Brand;
+import com.example.onlineshop.product.entity.Category;
+import com.example.onlineshop.cart.entity.Cart;
+import com.example.onlineshop.cart.entity.CartItem;
+import com.example.onlineshop.content.entity.Banner;
+import com.example.onlineshop.content.entity.FeaturedCollection;
+import com.example.onlineshop.product.entity.Inventory;
+import com.example.onlineshop.order.entity.Order;
+import com.example.onlineshop.order.entity.OrderItem;
+import com.example.onlineshop.product.entity.InventoryMovement;
+import com.example.onlineshop.product.entity.Image;
+import com.example.onlineshop.product.entity.Product;
+import com.example.onlineshop.product.entity.Review;
+import com.example.onlineshop.user.entity.Role;
+import com.example.onlineshop.product.entity.SKU;
+import com.example.onlineshop.user.entity.TokenSession;
+import com.example.onlineshop.shipping.entity.TaxRule;
+import com.example.onlineshop.shipping.entity.ShippingZone;
+import com.example.onlineshop.shipping.entity.ShippingMethod;
+import com.example.onlineshop.user.entity.User;
+import com.example.onlineshop.wishlist.entity.WishList;
+import com.example.onlineshop.order.repository.AddressRepository;
+import com.example.onlineshop.cart.repository.CartRepository;
+import com.example.onlineshop.cart.repository.CartItemRepository;
+import com.example.onlineshop.product.repository.BrandRepository;
+import com.example.onlineshop.content.repository.BannerRepository;
+import com.example.onlineshop.content.repository.FeaturedCollectionRepository;
+import com.example.onlineshop.product.repository.CategoryRepository;
+import com.example.onlineshop.product.repository.CategoryAttributeRepository;
+import com.example.onlineshop.product.repository.ProductRepository;
+import com.example.onlineshop.product.repository.SKURepository;
+import com.example.onlineshop.product.repository.InventoryRepository;
+import com.example.onlineshop.product.repository.InventoryMovementRepository;
+import com.example.onlineshop.product.repository.ImageRepository;
+import com.example.onlineshop.product.repository.ReviewRepository;
+import com.example.onlineshop.user.repository.RoleRepository;
+import com.example.onlineshop.user.repository.TokenSessionRepository;
+import com.example.onlineshop.user.repository.UserRepository;
+import com.example.onlineshop.order.repository.OrderRepository;
 import com.example.onlineshop.security.JwtUtil;
-import com.example.onlineshop.service.AdminService;
-import com.example.onlineshop.service.BuyerService;
-import com.example.onlineshop.service.EmailService;
-import com.example.onlineshop.service.ImageService;
-import com.example.onlineshop.service.UserService;
-import com.example.onlineshop.controller.UserController;
-import com.example.onlineshop.util.AuthenticationHelper;
+import com.example.onlineshop.common.service.AdminService;
+import com.example.onlineshop.common.service.BuyerService;
+import com.example.onlineshop.user.service.EmailService;
+import com.example.onlineshop.product.service.ImageService;
+import com.example.onlineshop.order.service.AsyncOrderService;
+import com.example.onlineshop.order.service.OrderProducerService;
+import com.example.onlineshop.user.service.UserService;
+import com.example.onlineshop.user.controller.UserController;
+import com.example.onlineshop.common.security.AuthenticationHelper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -112,7 +126,7 @@ class AuthRegistrationTest {
     private CartItemRepository cartItemRepository;
 
     @Mock
-    private com.example.onlineshop.repository.WishListRepository wishListRepository;
+    private com.example.onlineshop.wishlist.repository.WishListRepository wishListRepository;
 
     @Mock
     private CategoryRepository categoryRepository;
@@ -139,6 +153,12 @@ class AuthRegistrationTest {
     private InventoryRepository inventoryRepository;
 
     @Mock
+    private OrderRepository orderRepository;
+
+    @Mock
+    private OrderProducerService orderProducerService;
+
+    @Mock
     private InventoryMovementRepository inventoryMovementRepository;
 
     @Mock
@@ -148,16 +168,16 @@ class AuthRegistrationTest {
     private ReviewRepository reviewRepository;
 
     @Mock
-    private com.example.onlineshop.repository.CouponRepository couponRepository;
+    private com.example.onlineshop.promotion.repository.CouponRepository couponRepository;
 
     @Mock
-    private com.example.onlineshop.repository.TaxRuleRepository taxRuleRepository;
+    private com.example.onlineshop.shipping.repository.TaxRuleRepository taxRuleRepository;
 
     @Mock
-    private com.example.onlineshop.repository.ShippingZoneRepository shippingZoneRepository;
+    private com.example.onlineshop.shipping.repository.ShippingZoneRepository shippingZoneRepository;
 
     @Mock
-    private com.example.onlineshop.repository.ShippingMethodRepository shippingMethodRepository;
+    private com.example.onlineshop.shipping.repository.ShippingMethodRepository shippingMethodRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -182,6 +202,9 @@ class AuthRegistrationTest {
 
     @InjectMocks
     private ImageService imageService;
+
+    @InjectMocks
+    private AsyncOrderService asyncOrderService;
 
     @BeforeEach
     void setUp() {
@@ -1913,7 +1936,7 @@ class AuthRegistrationTest {
 
     @Test
     void shippingMethods_shouldReturnEligibleOptionsAndRejectBlankCountry() {
-        List<com.example.onlineshop.dto.ShippingMethodDTO> methods = buyerService.getShippingMethods("US", "10001", 110.00);
+        List<com.example.onlineshop.order.dto.ShippingMethodDTO> methods = buyerService.getShippingMethods("US", "10001", 110.00);
 
         assertFalse(methods.isEmpty());
         assertTrue(methods.stream().anyMatch(method -> "STANDARD".equals(method.getCode())));
@@ -1958,8 +1981,553 @@ class AuthRegistrationTest {
     }
 
     @Test
+    void orderPlacement_shouldReserveStockCreatePaymentIntentAndReplayIdempotently() {
+        User user = new User();
+        user.setEmail("buyer@example.com");
+        SKU sku = new SKU();
+        sku.setSkuCode("SKU-ORDER-1");
+        Inventory inventory = new Inventory();
+        inventory.setInventoryId(990L);
+        inventory.setSku(sku);
+        inventory.setSellingPrice(10.0);
+        inventory.setStockAvailable(5);
+        inventory.setReservedQuantity(0);
+
+        OrderRequestDTO request = new OrderRequestDTO();
+        request.setItems(List.of(itemRequest(990L, 2)));
+        request.setShippingMethod("STANDARD");
+        request.setQuotedTotal(26.60);
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findByUser_emailAndIdempotencyKey("buyer@example.com", "checkout-990"))
+                .thenReturn(Optional.empty(), Optional.of(savedOrder(700L)));
+        when(userRepository.findById("buyer@example.com")).thenReturn(Optional.of(user));
+        when(inventoryRepository.findAllById(List.of(990L))).thenReturn(List.of(inventory));
+        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> {
+            Order saved = invocation.getArgument(0);
+            if (saved.getOrderId() == null) {
+                saved.setOrderId(700L);
+            }
+            return saved;
+        });
+        when(orderRepository.findById(700L)).thenAnswer(invocation -> Optional.of(savedOrder(700L)));
+
+        var first = asyncOrderService.place(request, "checkout-990");
+
+        assertEquals(700L, first.get("orderId"));
+        assertEquals("PAID", first.get("status"));
+        assertEquals(3, inventory.getStockAvailable());
+        assertEquals(2, inventory.getReservedQuantity());
+        verify(inventoryRepository, times(1)).save(inventory);
+
+        var replay = asyncOrderService.place(request, "checkout-990");
+        assertEquals(700L, replay.get("orderId"));
+        verify(inventoryRepository, times(1)).save(inventory);
+    }
+
+    @Test
+    void orderPlacement_shouldRejectStaleQuoteBeforeReservingStock() {
+        User user = new User();
+        user.setEmail("buyer@example.com");
+        Inventory inventory = new Inventory();
+        inventory.setInventoryId(991L);
+        inventory.setSellingPrice(10.0);
+        inventory.setStockAvailable(5);
+
+        OrderRequestDTO request = new OrderRequestDTO();
+        request.setItems(List.of(itemRequest(991L, 1)));
+        request.setQuotedTotal(999.0);
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findByUser_emailAndIdempotencyKey("buyer@example.com", "stale-991"))
+                .thenReturn(Optional.empty());
+        when(userRepository.findById("buyer@example.com")).thenReturn(Optional.of(user));
+        when(inventoryRepository.findAllById(List.of(991L))).thenReturn(List.of(inventory));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> asyncOrderService.place(request, "stale-991"));
+        verify(inventoryRepository, never()).save(any(Inventory.class));
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void mockPayment_shouldApproveValidIntentAndBeIdempotent() {
+        Order order = savedOrder(850L);
+        order.setOrderStatus("FULFILLED");
+        order.setPaymentStatus("REQUIRES_PAYMENT");
+        order.setPaymentIntentId("pi-850");
+        order.setTotalPrice(26.60);
+        when(orderRepository.findByPaymentIntentId("pi-850")).thenReturn(Optional.of(order));
+
+        MockPaymentCompletionRequest request = new MockPaymentCompletionRequest();
+        request.setPaymentIntentId("pi-850");
+        request.setOutcome("approved");
+        request.setAmount(26.60);
+
+        MockPaymentCompletionDTO result = asyncOrderService.completeMockPayment(request, "local-mock-payment-token");
+
+        assertEquals("PAID", result.getPaymentStatus());
+        assertEquals("PAID", result.getOrderStatus());
+        assertEquals("PAID", order.getPaymentStatus());
+        verify(orderRepository).save(order);
+
+        MockPaymentCompletionDTO replay = asyncOrderService.completeMockPayment(request, "local-mock-payment-token");
+        assertEquals("PAID", replay.getPaymentStatus());
+        verify(orderRepository, times(1)).save(order);
+    }
+
+    @Test
+    void mockPayment_shouldRejectInvalidTokenAndAmountBeforeMutatingOrder() {
+        Order order = savedOrder(851L);
+        order.setPaymentStatus("REQUIRES_PAYMENT");
+        order.setPaymentIntentId("pi-851");
+        order.setTotalPrice(40.00);
+        when(orderRepository.findByPaymentIntentId("pi-851")).thenReturn(Optional.of(order));
+
+        MockPaymentCompletionRequest request = new MockPaymentCompletionRequest();
+        request.setPaymentIntentId("pi-851");
+        request.setOutcome("declined");
+        request.setAmount(39.00);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> asyncOrderService.completeMockPayment(request, "wrong-token"));
+        assertThrows(IllegalArgumentException.class,
+                () -> asyncOrderService.completeMockPayment(request, "local-mock-payment-token"));
+        assertEquals("REQUIRES_PAYMENT", order.getPaymentStatus());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void mockPayment_shouldRejectUnsupportedOutcome() {
+        Order order = savedOrder(852L);
+        order.setPaymentIntentId("pi-852");
+        order.setTotalPrice(10.00);
+        when(orderRepository.findByPaymentIntentId("pi-852")).thenReturn(Optional.of(order));
+
+        MockPaymentCompletionRequest request = new MockPaymentCompletionRequest();
+        request.setPaymentIntentId("pi-852");
+        request.setOutcome("pending");
+        request.setAmount(10.00);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> asyncOrderService.completeMockPayment(request, "local-mock-payment-token"));
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void guestOrderLookup_shouldSendChallengeForMatchWithoutRevealingExistence() {
+        Order order = savedOrder(860L);
+        order.setGuestOrderReference("GUEST-860");
+        order.setGuestEmail("guest@example.com");
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("GUEST-860", "guest@example.com"))
+                .thenReturn(Optional.of(order));
+
+        GuestOrderLookupRequest request = new GuestOrderLookupRequest();
+        request.setOrderReference(" GUEST-860 ");
+        request.setEmail("Guest@Example.com");
+
+        var response = buyerService.requestGuestOrderLookup(request);
+
+        assertTrue(response.getMessage().contains("If an eligible guest order exists"));
+        verify(emailService).sendGuestOrderLookupEmail(eq("guest@example.com"), anyString());
+    }
+
+    @Test
+    void guestOrderLookup_shouldReturnSameGenericResponseForMissingOrder() {
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("MISSING", "guest@example.com"))
+                .thenReturn(Optional.empty());
+
+        GuestOrderLookupRequest request = new GuestOrderLookupRequest();
+        request.setOrderReference("MISSING");
+        request.setEmail("guest@example.com");
+
+        var response = buyerService.requestGuestOrderLookup(request);
+
+        assertEquals("If an eligible guest order exists, verification instructions have been sent.", response.getMessage());
+        verify(emailService, never()).sendGuestOrderLookupEmail(anyString(), anyString());
+    }
+
+    @Test
+    void guestOrderLookup_shouldRejectMalformedRequestBeforeLookup() {
+        GuestOrderLookupRequest request = new GuestOrderLookupRequest();
+        request.setOrderReference("GUEST-860");
+        request.setEmail("not-an-email");
+
+        assertThrows(IllegalArgumentException.class, () -> buyerService.requestGuestOrderLookup(request));
+        verifyNoInteractions(orderRepository);
+    }
+
+    @Test
+    void guestOrderLookupVerify_shouldConsumeChallengeAndIssueScopedAccess() {
+        Order order = savedOrder(861L);
+        order.setGuestOrderReference("GUEST-861");
+        order.setGuestEmail("guest@example.com");
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("GUEST-861", "guest@example.com"))
+                .thenReturn(Optional.of(order));
+
+        GuestOrderLookupRequest lookup = new GuestOrderLookupRequest();
+        lookup.setOrderReference("GUEST-861");
+        lookup.setEmail("guest@example.com");
+        buyerService.requestGuestOrderLookup(lookup);
+
+        var emailCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendGuestOrderLookupEmail(eq("guest@example.com"), emailCaptor.capture());
+        GuestOrderLookupVerifyRequest verifyRequest = new GuestOrderLookupVerifyRequest();
+        verifyRequest.setChallenge(emailCaptor.getValue());
+
+        var access = buyerService.verifyGuestOrderLookup(verifyRequest);
+
+        assertEquals(861L, access.getOrderId());
+        assertNotNull(access.getAccessToken());
+        assertTrue(access.getExpiresAt().isAfter(java.time.LocalDateTime.now()));
+        assertTrue(buyerService.hasGuestOrderAccess(861L, access.getAccessToken()));
+        assertFalse(buyerService.hasGuestOrderAccess(862L, access.getAccessToken()));
+    }
+
+    @Test
+    void guestOrderLookupVerify_shouldRejectReplayAndInvalidChallenge() {
+        GuestOrderLookupVerifyRequest request = new GuestOrderLookupVerifyRequest();
+        request.setChallenge("missing-challenge");
+        assertThrows(IllegalArgumentException.class, () -> buyerService.verifyGuestOrderLookup(request));
+
+        Order order = savedOrder(862L);
+        order.setGuestOrderReference("GUEST-862");
+        order.setGuestEmail("guest@example.com");
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("GUEST-862", "guest@example.com"))
+                .thenReturn(Optional.of(order));
+        GuestOrderLookupRequest lookup = new GuestOrderLookupRequest();
+        lookup.setOrderReference("GUEST-862");
+        lookup.setEmail("guest@example.com");
+        buyerService.requestGuestOrderLookup(lookup);
+        var emailCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendGuestOrderLookupEmail(eq("guest@example.com"), emailCaptor.capture());
+        request.setChallenge(emailCaptor.getValue());
+        buyerService.verifyGuestOrderLookup(request);
+
+        assertThrows(IllegalArgumentException.class, () -> buyerService.verifyGuestOrderLookup(request));
+    }
+
+    @Test
+    void guestOrder_shouldRequireScopedCredentialAndReturnOnlyVerifiedGuestOrder() {
+        Order order = savedOrder(863L);
+        order.setOrderStatus("PAID");
+        order.setGuestOrderReference("GUEST-863");
+        order.setGuestEmail("guest@example.com");
+        order.setOrderItems(List.of());
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("GUEST-863", "guest@example.com"))
+                .thenReturn(Optional.of(order));
+        when(orderRepository.findById(863L)).thenReturn(Optional.of(order));
+
+        GuestOrderLookupRequest lookup = new GuestOrderLookupRequest();
+        lookup.setOrderReference("GUEST-863");
+        lookup.setEmail("guest@example.com");
+        buyerService.requestGuestOrderLookup(lookup);
+        var emailCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendGuestOrderLookupEmail(eq("guest@example.com"), emailCaptor.capture());
+        GuestOrderLookupVerifyRequest verifyRequest = new GuestOrderLookupVerifyRequest();
+        verifyRequest.setChallenge(emailCaptor.getValue());
+        var access = buyerService.verifyGuestOrderLookup(verifyRequest);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> buyerService.getVerifiedGuestOrder(863L, null));
+        var result = buyerService.getVerifiedGuestOrder(863L, access.getAccessToken());
+        assertEquals(863L, result.getOrderId());
+        assertEquals("PAID", result.getOrderStatus());
+    }
+
+    @Test
+    void guestOrder_shouldRejectCredentialScopedToAnotherOrder() {
+        Order order = savedOrder(864L);
+        order.setGuestOrderReference("GUEST-864");
+        order.setGuestEmail("guest@example.com");
+        order.setOrderItems(List.of());
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("GUEST-864", "guest@example.com"))
+                .thenReturn(Optional.of(order));
+        GuestOrderLookupRequest lookup = new GuestOrderLookupRequest();
+        lookup.setOrderReference("GUEST-864");
+        lookup.setEmail("guest@example.com");
+        buyerService.requestGuestOrderLookup(lookup);
+        var emailCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendGuestOrderLookupEmail(eq("guest@example.com"), emailCaptor.capture());
+        GuestOrderLookupVerifyRequest verifyRequest = new GuestOrderLookupVerifyRequest();
+        verifyRequest.setChallenge(emailCaptor.getValue());
+        var access = buyerService.verifyGuestOrderLookup(verifyRequest);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> buyerService.getVerifiedGuestOrder(999L, access.getAccessToken()));
+    }
+
+    @Test
+    void guestOrderClaim_shouldAssociateVerifiedOrderAndRecordAuditHistory() {
+        User user = new User();
+        user.setEmail("guest@example.com");
+        Order order = savedOrder(865L);
+        order.setOrderStatus("PAID");
+        order.setUser(null);
+        order.setGuestOrderReference("GUEST-865");
+        order.setGuestEmail("guest@example.com");
+        order.setOrderItems(List.of());
+        when(authenticationHelper.getCurrentUserId()).thenReturn("guest@example.com");
+        when(userRepository.findById("guest@example.com")).thenReturn(Optional.of(user));
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("GUEST-865", "guest@example.com"))
+                .thenReturn(Optional.of(order));
+        when(orderRepository.findById(865L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(order)).thenReturn(order);
+
+        GuestOrderLookupRequest lookup = new GuestOrderLookupRequest();
+        lookup.setOrderReference("GUEST-865");
+        lookup.setEmail("guest@example.com");
+        buyerService.requestGuestOrderLookup(lookup);
+        var emailCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendGuestOrderLookupEmail(eq("guest@example.com"), emailCaptor.capture());
+        GuestOrderLookupVerifyRequest verifyRequest = new GuestOrderLookupVerifyRequest();
+        verifyRequest.setChallenge(emailCaptor.getValue());
+        var access = buyerService.verifyGuestOrderLookup(verifyRequest);
+
+        GuestOrderClaimRequest claim = new GuestOrderClaimRequest();
+        claim.setAccessToken(access.getAccessToken());
+        var result = buyerService.claimGuestOrder(claim);
+
+        assertEquals("guest@example.com", order.getUser().getEmail());
+        assertEquals("CLAIMED", order.getStatusHistory().get(order.getStatusHistory().size() - 1).getStatus());
+        assertEquals(865L, result.getOrderId());
+        assertFalse(buyerService.hasGuestOrderAccess(865L, access.getAccessToken()));
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void guestOrderClaim_shouldRejectCredentialForDifferentAuthenticatedEmail() {
+        Order order = savedOrder(866L);
+        order.setUser(null);
+        order.setGuestOrderReference("GUEST-866");
+        order.setGuestEmail("guest@example.com");
+        when(authenticationHelper.getCurrentUserId()).thenReturn("other@example.com");
+        when(orderRepository.findByGuestOrderReferenceAndGuestEmailIgnoreCase("GUEST-866", "guest@example.com"))
+                .thenReturn(Optional.of(order));
+        GuestOrderLookupRequest lookup = new GuestOrderLookupRequest();
+        lookup.setOrderReference("GUEST-866");
+        lookup.setEmail("guest@example.com");
+        buyerService.requestGuestOrderLookup(lookup);
+        var emailCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailService).sendGuestOrderLookupEmail(eq("guest@example.com"), emailCaptor.capture());
+        GuestOrderLookupVerifyRequest verifyRequest = new GuestOrderLookupVerifyRequest();
+        verifyRequest.setChallenge(emailCaptor.getValue());
+        var access = buyerService.verifyGuestOrderLookup(verifyRequest);
+
+        GuestOrderClaimRequest claim = new GuestOrderClaimRequest();
+        claim.setAccessToken(access.getAccessToken());
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> buyerService.claimGuestOrder(claim));
+        assertNull(order.getUser());
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void currentUserOrders_shouldPageOwnOrdersAndApplyStatusFilter() {
+        Order paid = savedOrder(801L);
+        paid.setOrderDate(java.time.LocalDate.of(2026, 10, 1));
+        Order pending = savedOrder(802L);
+        pending.setOrderStatus("PENDING");
+        pending.setOrderDate(java.time.LocalDate.of(2026, 10, 2));
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findByUser_email(eq("buyer@example.com"), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(paid, pending)));
+        when(orderRepository.findByUser_emailAndOrderStatusIgnoreCase(
+                eq("buyer@example.com"), eq("PAID"), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(paid)));
+
+        var all = buyerService.getCurrentUserOrders(0, 10, null);
+        assertEquals(2, all.getTotalElements());
+        assertEquals(2, all.getContent().size());
+
+        var filtered = buyerService.getCurrentUserOrders(1, 5, " paid ");
+        assertEquals(1, filtered.getTotalElements());
+        assertEquals(801L, filtered.getContent().get(0).getOrderId());
+
+        assertThrows(IllegalArgumentException.class,
+                () -> buyerService.getCurrentUserOrders(0, 0, null));
+        verify(orderRepository).findByUser_emailAndOrderStatusIgnoreCase(
+                eq("buyer@example.com"), eq("PAID"), any(org.springframework.data.domain.Pageable.class));
+    }
+
+    @Test
+    void orderDetail_shouldReturnOwnOrderStateAndRejectAnotherUsersOrder() {
+        User owner = new User();
+        owner.setEmail("buyer@example.com");
+        Order own = savedOrder(810L);
+        own.setUser(owner);
+        own.setPaymentStatus("PAID");
+        own.setStatusHistory(List.of(new com.example.onlineshop.order.entity.OrderStatusHistory(
+                own, "PENDING", "Order placed")));
+
+        User other = new User();
+        other.setEmail("other@example.com");
+        Order foreign = savedOrder(811L);
+        foreign.setUser(other);
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findById(810L)).thenReturn(Optional.of(own));
+        when(orderRepository.findById(811L)).thenReturn(Optional.of(foreign));
+
+        OrderDTO detail = buyerService.getOrderById(810L);
+        assertEquals(810L, detail.getOrderId());
+        assertEquals("PAID", detail.getPaymentStatus());
+        assertEquals(1, detail.getStatusHistory().size());
+        assertEquals("PENDING", detail.getStatusHistory().get(0).getStatus());
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> buyerService.getOrderById(811L));
+    }
+
+    @Test
+    void orderReceipt_shouldExposeStoredFinancialSnapshotAndRejectForeignOrder() {
+        User owner = new User();
+        owner.setEmail("buyer@example.com");
+        Order order = savedOrder(820L);
+        order.setUser(owner);
+        order.setSubtotal(80.0);
+        order.setDiscount(8.0);
+        order.setShippingFee(5.0);
+        order.setTax(6.16);
+        order.setTotalPrice(83.16);
+        order.setPaymentStatus("PAID");
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findById(820L)).thenReturn(Optional.of(order));
+
+        OrderReceiptDTO receipt = buyerService.getOrderReceipt(820L);
+
+        assertEquals(820L, receipt.getOrderId());
+        assertEquals(80.0, receipt.getSubtotal());
+        assertEquals(8.0, receipt.getDiscount());
+        assertEquals(83.16, receipt.getTotalPrice());
+        assertEquals("PAID", receipt.getPaymentStatus());
+        assertNotNull(receipt.getItems());
+    }
+
+    @Test
+    void orderCancellation_shouldReleaseReservationAuditTransitionAndBeIdempotent() {
+        User owner = new User();
+        owner.setEmail("buyer@example.com");
+        SKU sku = new SKU();
+        sku.setSkuCode("SKU-CANCEL-1");
+        Inventory inventory = new Inventory();
+        inventory.setInventoryId(992L);
+        inventory.setSku(sku);
+        inventory.setStockAvailable(3);
+        inventory.setReservedQuantity(2);
+
+        Order order = savedOrder(830L);
+        order.setUser(owner);
+        order.setOrderStatus("FULFILLED");
+        OrderItem item = new OrderItem(sku, 2, 15.0);
+        item.setOrder(order);
+        order.setOrderItems(List.of(item));
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findById(830L)).thenReturn(Optional.of(order));
+        when(inventoryRepository.findBySku(sku)).thenReturn(List.of(inventory));
+        when(inventoryRepository.save(inventory)).thenReturn(inventory);
+        when(orderRepository.save(order)).thenReturn(order);
+
+        OrderDTO cancelled = buyerService.cancelCurrentUserOrder(830L);
+
+        assertEquals("CANCELLED", cancelled.getOrderStatus());
+        assertEquals(5, inventory.getStockAvailable());
+        assertEquals(0, inventory.getReservedQuantity());
+        assertTrue(cancelled.getStatusHistory().stream().anyMatch(history -> "CANCELLED".equals(history.getStatus())));
+        verify(inventoryRepository, times(1)).save(inventory);
+
+        buyerService.cancelCurrentUserOrder(830L);
+        verify(inventoryRepository, times(1)).save(inventory);
+    }
+
+    @Test
+    void orderCancellation_shouldRejectPaidOrders() {
+        User owner = new User();
+        owner.setEmail("buyer@example.com");
+        Order order = savedOrder(831L);
+        order.setUser(owner);
+        order.setOrderStatus("PAID");
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findById(831L)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> buyerService.cancelCurrentUserOrder(831L));
+        verify(orderRepository, never()).save(order);
+    }
+
+    @Test
+    void reorder_shouldAddAvailableVariantsUsingCurrentStockAndReportUnavailableItems() {
+        User owner = new User();
+        owner.setEmail("buyer@example.com");
+        Product product = new Product();
+        product.setApproved(true);
+
+        SKU availableSku = new SKU();
+        availableSku.setSkuCode("SKU-REORDER-AVAILABLE");
+        availableSku.setProduct(product);
+        Inventory available = new Inventory();
+        available.setInventoryId(993L);
+        available.setSku(availableSku);
+        available.setSellingPrice(21.0);
+        available.setStockAvailable(4);
+
+        SKU unavailableSku = new SKU();
+        unavailableSku.setSkuCode("SKU-REORDER-OUT");
+        unavailableSku.setProduct(product);
+        Inventory unavailable = new Inventory();
+        unavailable.setInventoryId(994L);
+        unavailable.setSku(unavailableSku);
+        unavailable.setStockAvailable(0);
+
+        Order order = savedOrder(840L);
+        order.setUser(owner);
+        OrderItem availableItem = new OrderItem(availableSku, 2, 18.0);
+        availableItem.setOrder(order);
+        OrderItem unavailableItem = new OrderItem(unavailableSku, 1, 12.0);
+        unavailableItem.setOrder(order);
+        order.setOrderItems(List.of(availableItem, unavailableItem));
+
+        Cart cart = new Cart();
+        cart.setUser(owner);
+        cart.setCartItems(new java.util.ArrayList<>());
+
+        when(authenticationHelper.getCurrentUserId()).thenReturn("buyer@example.com");
+        when(orderRepository.findById(840L)).thenReturn(Optional.of(order));
+        when(cartRepository.findByUserEmail("buyer@example.com")).thenReturn(cart);
+        when(inventoryRepository.findBySku(availableSku)).thenReturn(List.of(available));
+        when(inventoryRepository.findBySku(unavailableSku)).thenReturn(List.of(unavailable));
+        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cartRepository.save(cart)).thenReturn(cart);
+
+        ReorderResultDTO result = buyerService.reorderOrder(840L);
+
+        assertEquals(List.of("SKU-REORDER-AVAILABLE"), result.getAddedSkuCodes());
+        assertEquals(List.of("SKU-REORDER-OUT"), result.getUnavailableSkuCodes());
+        assertEquals(1, cart.getCartItems().size());
+        assertEquals(2, cart.getCartItems().get(0).getQuantity());
+        assertEquals(21.0, cart.getCartItems().get(0).getInventory().getSellingPrice());
+    }
+
+    private static OrderRequestDTO.OrderItemRequestDTO itemRequest(Long inventoryId, int quantity) {
+        OrderRequestDTO.OrderItemRequestDTO item = new OrderRequestDTO.OrderItemRequestDTO();
+        item.setInventoryId(inventoryId);
+        item.setQuantity(quantity);
+        return item;
+    }
+
+    private static Order savedOrder(Long orderId) {
+        Order order = new Order();
+        order.setOrderId(orderId);
+        order.setOrderStatus("PAID");
+        return order;
+    }
+
+    @Test
     void adminCoupons_shouldListCurrentActiveCouponsAndFilterByStatus() {
-        com.example.onlineshop.model.Coupon active = new com.example.onlineshop.model.Coupon();
+        com.example.onlineshop.promotion.entity.Coupon active = new com.example.onlineshop.promotion.entity.Coupon();
         active.setCouponId(1001L);
         active.setCode("SAVE10");
         active.setActive(true);
@@ -1984,7 +2552,7 @@ class AuthRegistrationTest {
         payload.setMinSpend(50.0);
         payload.setActive(true);
 
-        com.example.onlineshop.model.Coupon saved = new com.example.onlineshop.model.Coupon();
+        com.example.onlineshop.promotion.entity.Coupon saved = new com.example.onlineshop.promotion.entity.Coupon();
         saved.setCouponId(1002L);
         saved.setCode("VIP20");
         saved.setDescription("VIP seasonal discount");
@@ -1992,7 +2560,7 @@ class AuthRegistrationTest {
         saved.setValue(20.0);
         saved.setMinSpend(50.0);
         saved.setActive(true);
-        when(couponRepository.save(any(com.example.onlineshop.model.Coupon.class))).thenReturn(saved);
+        when(couponRepository.save(any(com.example.onlineshop.promotion.entity.Coupon.class))).thenReturn(saved);
 
         CouponDTO created = adminService.createCouponForAdmin(payload);
         assertEquals("VIP20", created.getCode());
@@ -2010,7 +2578,7 @@ class AuthRegistrationTest {
 
     @Test
     void adminCoupons_shouldToggleStatusWithoutChangingHistory() {
-        com.example.onlineshop.model.Coupon coupon = new com.example.onlineshop.model.Coupon();
+        com.example.onlineshop.promotion.entity.Coupon coupon = new com.example.onlineshop.promotion.entity.Coupon();
         coupon.setCouponId(1003L);
         coupon.setCode("NEXTDAY");
         coupon.setActive(false);

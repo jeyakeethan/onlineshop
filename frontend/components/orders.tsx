@@ -55,7 +55,7 @@ export function OrderDetailView({ id }: { id: string }) {
   async function cancel() {
     setMessage('Cancelling order...')
     try {
-      await request(`/api/orders/${id}`, { method: 'DELETE' })
+      await request(`/api/orders/${id}/cancel`, { method: 'POST' })
       setOrder((current) => current ? { ...current, orderStatus: 'CANCELLED' } : current)
       setMessage('Order cancelled.')
     } catch { setMessage('We could not cancel this order.') }

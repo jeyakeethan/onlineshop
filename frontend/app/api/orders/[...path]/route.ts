@@ -3,7 +3,10 @@ const BACKEND = process.env.BACKEND_BASE_URL!
 async function proxy(req: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params
   const url = new URL(req.url)
-  const backendUrl = `${BACKEND}/api/v1/orders/${path.join('/')}${url.search}`
+  const backendPath = path[0] === 'admin'
+    ? `/api/v1/admin/orders/${path.slice(1).join('/')}`
+    : `/api/v1/orders/${path.join('/')}`
+  const backendUrl = `${BACKEND}${backendPath}${url.search}`
   const headers: Record<string, string> = {}
   const contentType = req.headers.get('content-type')
   const cookie = req.headers.get('cookie')

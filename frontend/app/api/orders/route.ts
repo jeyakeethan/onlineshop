@@ -12,7 +12,8 @@ function buildHeaders(req: Request) {
 async function proxy(req: Request) {
   const url = new URL(req.url)
   const tail = url.pathname.replace('/api/orders', '')
-  const backendUrl = `${BACKEND}/api/v1/orders${tail}${url.search}`
+  const backendPath = tail === '/admin' ? '/api/v1/admin/orders' : `/api/v1/orders${tail}`
+  const backendUrl = `${BACKEND}${backendPath}${url.search}`
   const method = req.method
   const init: any = { method, headers: buildHeaders(req) }
   if (method !== 'GET' && method !== 'HEAD') {

@@ -1,11 +1,11 @@
 package com.example.onlineshop;
 
-import com.example.onlineshop.model.TokenSession;
-import com.example.onlineshop.model.User;
-import com.example.onlineshop.repository.TokenSessionRepository;
+import com.example.onlineshop.user.entity.TokenSession;
+import com.example.onlineshop.user.entity.User;
+import com.example.onlineshop.user.repository.TokenSessionRepository;
 import com.example.onlineshop.security.JwtAuthenticationFilter;
 import com.example.onlineshop.security.JwtUtil;
-import com.example.onlineshop.service.UserService;
+import com.example.onlineshop.user.service.UserService;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +38,9 @@ class TokenSessionTest {
 
     @InjectMocks
     private UserService userService;
+
+    @Mock
+    private UserService filterUserService;
 
     @Test
     void revokeToken_marksMatchingActiveSessionRevoked() {
@@ -76,20 +79,20 @@ class TokenSessionTest {
         user.setEmail("admin@example.com");
         user.setRoles(List.of());
 
-        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtUtil, userService);
+        JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtUtil, filterUserService);
         MockHttpServletRequest request = new MockHttpServletRequest();
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer revoked-token");
         MockHttpServletResponse response = new MockHttpServletResponse();
         FilterChain chain = (req, res) -> {};
 
         when(jwtUtil.extractUsername("revoked-token")).thenReturn("admin@example.com");
-        when(userService.getUserDetailById("admin@example.com")).thenReturn(user);
+        when(filterUserService.getUserDetailById("admin@example.com")).thenReturn(user);
         when(jwtUtil.validateToken("revoked-token", user)).thenReturn(true);
-        when(userService.isTokenActive("revoked-token", "admin@example.com")).thenReturn(false);
+        when(filterUserService.isTokenActive("revoked-token", "admin@example.com")).thenReturn(false);
 
         filter.doFilter(request, response, chain);
 
-        verify(userService).isTokenActive("revoked-token", "admin@example.com");
+        verify(filterUserService).isTokenActive("revoked-token", "admin@example.com");
         assertNull(SecurityContextHolder.getContext().getAuthentication());
         org.junit.jupiter.api.Assertions.assertEquals(401, response.getStatus());
         org.junit.jupiter.api.Assertions.assertTrue(response.getContentAsString().contains("Your session has expired. Please log in again."));

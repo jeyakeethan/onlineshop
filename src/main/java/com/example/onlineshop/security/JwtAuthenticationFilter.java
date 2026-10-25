@@ -1,6 +1,6 @@
 package com.example.onlineshop.security;
 
-import com.example.onlineshop.service.UserService;
+import com.example.onlineshop.user.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpHeaders;

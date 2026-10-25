@@ -12,7 +12,7 @@ export default function AdminOrdersPage() {
   const [message, setMessage] = useState('Loading orders...')
 
   async function load() {
-    const response = await fetch('/api/orders', { cache: 'no-store' })
+    const response = await fetch('/api/orders/admin', { cache: 'no-store' })
     if (!response.ok) throw new Error()
     setOrders(await response.json())
     setMessage('')
@@ -23,7 +23,7 @@ export default function AdminOrdersPage() {
   async function updateStatus(orderId: number | undefined, status: string) {
     if (!orderId) return
     setMessage('Updating order...')
-    const response = await fetch(`/api/orders/${orderId}/status`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status }) })
+    const response = await fetch(`/api/orders/admin/${orderId}/status`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status }) })
     if (!response.ok) { setMessage('Could not update order status.'); return }
     await load()
   }

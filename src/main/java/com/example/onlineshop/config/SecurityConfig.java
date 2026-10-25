@@ -39,11 +39,14 @@ public class SecurityConfig {
                     "/api/v1/auth/forgot-password",
                     "/api/v1/auth/reset-password",
                     "/api/v1/auth/verify-email",
-                    "/api/v1/auth/verification/resend").permitAll()
+                    "/api/v1/auth/verification/resend",
+                    "/api/v1/guest-orders/lookup/request",
+                    "/api/v1/guest-orders/lookup/verify").permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/v1/auth/google/start",
                     "/api/v1/auth/google/callback").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/guest-orders/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").authenticated()
                         .requestMatchers("/index.html", "/").permitAll()
                         .requestMatchers("/error").permitAll()

@@ -1,6 +1,6 @@
 package com.example.onlineshop.config;
 
-import com.example.onlineshop.dto.OrderEvent;
+import com.example.onlineshop.order.dto.OrderEvent;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.TopicPartition;
@@ -55,7 +55,7 @@ public class KafkaConfig {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "application-consumer-group");
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.onlineshop.dto");
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.example.onlineshop");
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(),
                 new JsonDeserializer<>(OrderEvent.class, false));
     }
