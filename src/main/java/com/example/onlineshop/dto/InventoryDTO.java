@@ -2,10 +2,12 @@ package com.example.onlineshop.dto;
 
 import com.example.onlineshop.model.Inventory;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Getter
 @Setter
+@NoArgsConstructor
 public class InventoryDTO {
 
     private Long inventoryId;
@@ -13,6 +15,7 @@ public class InventoryDTO {
     private double costPrice;
     private double sellingPrice;
     private int stockAvailable;
+    private int lowStockThreshold;
 
     public InventoryDTO(Inventory inventory) {
         this.inventoryId = inventory.getInventoryId();
@@ -20,5 +23,6 @@ public class InventoryDTO {
         this.costPrice = inventory.getCostPrice();
         this.sellingPrice = inventory.getSellingPrice();
         this.stockAvailable = inventory.getStockAvailable();
+        this.lowStockThreshold = inventory.getLowStockThreshold();
     }
 }

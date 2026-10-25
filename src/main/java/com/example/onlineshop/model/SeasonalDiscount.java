@@ -1,6 +1,7 @@
 package com.example.onlineshop.model;
 
 import jakarta.persistence.*;
+import java.io.Serializable;
 import java.time.LocalDate;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,7 +10,9 @@ import lombok.Setter;
 @Table(name = "seasonal_discounts")
 @Getter
 @Setter
-public class SeasonalDiscount {
+public class SeasonalDiscount implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

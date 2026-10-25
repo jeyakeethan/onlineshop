@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.Properties;
 import java.io.InputStream;
@@ -36,10 +37,12 @@ public class JwtUtil {
     }
 
     public String generateToken(UserDetails userDetails) {
+        Date issuedAt = new Date();
         return Jwts.builder()
+            .setId(UUID.randomUUID().toString())
                 .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours
+            .setIssuedAt(issuedAt)
+            .setExpiration(new Date(issuedAt.getTime() + 1000 * 60 * 60 * 10))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -55,6 +58,10 @@ public class JwtUtil {
 
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
+    }
+
+    public String extractTokenId(String token) {
+        return extractClaim(token, Claims::getId);
     }
 
     private boolean isTokenExpired(String token) {

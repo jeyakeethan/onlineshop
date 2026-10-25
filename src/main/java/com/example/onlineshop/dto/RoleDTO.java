@@ -3,10 +3,15 @@ package com.example.onlineshop.dto;
 import com.example.onlineshop.model.Role;
 import lombok.Data;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Data
 public class RoleDTO {
-    private Long id;         // Unique ID for the role
-    private String name;     // Name of the role (e.g., "ADMIN", "BUYER")
+    private Long id;
+    private String name;
+    private List<String> permissions = new ArrayList<>();
 
     public RoleDTO(Long id, String name) {
         this.id = id;
@@ -16,5 +21,10 @@ public class RoleDTO {
     public RoleDTO(Role role) {
         this.id = role.getRoleId();
         this.name = role.getName();
+        if (role.getPermissions() != null) {
+            this.permissions = role.getPermissions().stream()
+                    .map(p -> p.getName())
+                    .collect(Collectors.toList());
+        }
     }
 }

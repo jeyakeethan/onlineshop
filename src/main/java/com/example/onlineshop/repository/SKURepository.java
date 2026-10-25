@@ -14,4 +14,13 @@ public interface SKURepository extends JpaRepository<SKU, Long> {
     void deleteByProduct_ProductId(Long productId);
 
     List<SKU> findByProduct(Product product);
+
+    boolean existsBySkuCodeIgnoreCase(String skuCode);
+
+    boolean existsByProduct_ProductIdAndSizeIgnoreCaseAndColorIgnoreCase(Long productId, String size, String color);
+
+    boolean existsBySkuCodeIgnoreCaseAndSkuIdNot(String skuCode, Long skuId);
+
+    boolean existsByProduct_ProductIdAndSizeIgnoreCaseAndColorIgnoreCaseAndSkuIdNot(
+            Long productId, String size, String color, Long skuId);
 }

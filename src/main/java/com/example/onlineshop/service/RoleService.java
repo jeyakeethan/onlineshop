@@ -1,8 +1,10 @@
 package com.example.onlineshop.service;
 
 import com.example.onlineshop.dto.RoleDTO;
+import com.example.onlineshop.model.Permission;
 import com.example.onlineshop.model.Role;
 import com.example.onlineshop.model.User;
+import com.example.onlineshop.repository.PermissionRepository;
 import com.example.onlineshop.repository.RoleRepository;
 import com.example.onlineshop.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +22,9 @@ public class RoleService {
     @Autowired
     private UserRepository userRepository;
 
-    // Create a new role
+    @Autowired
+    private PermissionRepository permissionRepository;
+
     public void createRole(RoleDTO roleDTO) {
         if (roleRepository.existsByName(roleDTO.getName())) {
             throw new RuntimeException("Role already exists");
@@ -28,15 +32,16 @@ public class RoleService {
 
         Role role = new Role();
         role.setName(roleDTO.getName());
+        role.setPermissions(resolvePermissions(roleDTO.getPermissions()));
         roleRepository.save(role);
     }
 
-    // Update existing role details
     public void updateRole(Long roleId, RoleDTO roleDTO) {
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Role not found"));
 
         role.setName(roleDTO.getName());
+        role.setPermissions(resolvePermissions(roleDTO.getPermissions()));
         roleRepository.save(role);
     }
 
@@ -83,5 +88,19 @@ public class RoleService {
 
         user.getRoles().remove(role);
         userRepository.save(user);
+    }
+
+    private List<Permission> resolvePermissions(List<String> permissionNames) {
+        if (permissionNames == null || permissionNames.isEmpty()) {
+            return List.of();
+        }
+        return permissionNames.stream()
+                .map(name -> permissionRepository.findByName(name)
+                        .orElseGet(() -> {
+                            Permission permission = new Permission();
+                            permission.setName(name);
+                            return permissionRepository.save(permission);
+                        }))
+                .collect(Collectors.toList());
     }
 }

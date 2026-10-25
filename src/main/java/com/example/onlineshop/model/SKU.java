@@ -2,16 +2,24 @@ package com.example.onlineshop.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.io.Serializable;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "skus")
+@Table(name = "skus", uniqueConstraints = {
+    @UniqueConstraint(name = "uk_sku_code", columnNames = "sku_code"),
+    @UniqueConstraint(name = "uk_product_variant_options", columnNames = {"product_id", "size", "color"})
+})
 @Getter
 @Setter
-public class SKU {
+@NoArgsConstructor
+public class SKU implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,6 +28,8 @@ public class SKU {
     private String size;  // Size of the SKU
     private String color;  // Color of the SKU
     private String skuCode;  // SKU code (unique identifier for the variant)
+    @Column(nullable = false)
+    private boolean active = true;
 
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)  // Link SKU to Product
@@ -29,5 +39,5 @@ public class SKU {
     private List<Inventory> inventories = new ArrayList<>();
 
     @OneToMany(mappedBy = "sku", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Image> images;  // A SKU can have multiple images
+    private List<Image> images = new ArrayList<>();  // A SKU can have multiple images
 }

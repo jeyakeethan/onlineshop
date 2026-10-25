@@ -8,17 +8,20 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
-public class User implements UserDetails {
+public class User implements UserDetails, Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @Column(name = "email", nullable = false, unique = true, length = 255)
@@ -30,6 +33,23 @@ public class User implements UserDetails {
     private String dob;
     private LocalDate lastLoginTime;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
+
+    @Column(name = "email_verification_expires_at")
+    private LocalDateTime emailVerificationTokenExpiresAt;
+
+    @Column(name = "verification_email_sent_at")
+    private LocalDateTime verificationEmailSentAt;
+
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_expires_at")
+    private LocalDateTime passwordResetTokenExpiresAt;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -38,6 +58,23 @@ public class User implements UserDetails {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
     private List<Role> roles = new ArrayList<>();
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Column(nullable = false)
+    private boolean deletionRequested = false;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
+
+    @Column(nullable = false)
+    private boolean anonymized = false;
+
+    private LocalDateTime deactivationRequestedAt;
+    private LocalDateTime deletionRequestedAt;
+    private LocalDateTime anonymizedAt;
+    private LocalDateTime retentionDeadline;
 
     // Implementing UserDetails methods
     @Override
@@ -52,9 +89,19 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName())) // Assuming 'Role' has 'getName()'
-                .collect(Collectors.toList());
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        for (Role role : roles) {
+            String roleName = role.getName();
+            if (!roleName.startsWith("ROLE_")) {
+                roleName = "ROLE_" + roleName;
+            }
+            authorities.add(new SimpleGrantedAuthority(roleName));
+            if (role.getPermissions() != null) {
+                role.getPermissions().forEach(permission ->
+                        authorities.add(new SimpleGrantedAuthority(permission.getName())));
+            }
+        }
+        return authorities;
     }
 
     @Override
@@ -74,7 +121,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true; // You can change this based on your business logic
+        return this.active && !this.deleted && !this.anonymized && this.emailVerified;
     }
 
     // Optional: Custom method

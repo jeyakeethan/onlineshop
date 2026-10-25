@@ -10,21 +10,18 @@ import java.util.Optional;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    Optional<Product> findByNameContaining(String keyword);
-
-//    Optional<Product> findByOnSaleTrue();
+    List<Product> findByNameContaining(String keyword);
 
     List<Product> findByCategory_Subcategory(String subcategory);
 
     List<Product> findByCategory_SubcategoryAndNameContaining(String subcategory, String name);
 
-    // Use @EntityGraph to eagerly load skus and inventories when fetching a product
-    @EntityGraph(attributePaths = {"skus", "skus.inventories"})
+    @EntityGraph(attributePaths = {"skus"})
     Optional<Product> findById(Long productId);
 
-    @EntityGraph(attributePaths = {"skus", "skus.inventories"})
+    @EntityGraph(attributePaths = {"skus"})
     List<Product> findAll();
 
-    List<Product> findByCategoryIn(List<String> subcategoryNames);
+    List<Product> findByCategory_SubcategoryIn(List<String> subcategoryNames);
 
 }

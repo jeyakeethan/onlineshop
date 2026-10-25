@@ -1,6 +1,8 @@
 package com.example.onlineshop.controller;
 
 import com.example.onlineshop.model.Image;
+import com.example.onlineshop.dto.ImageDTO;
+import com.example.onlineshop.dto.ImageUpdateDTO;
 import com.example.onlineshop.service.ImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -9,17 +11,63 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
 @RestController
-@RequestMapping("/api/images")
 public class ImageController {
 
     @Autowired
     private ImageService imageService;
+
+        @Operation(summary = "Upload an image to an admin product")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Image uploaded successfully."),
+                        @ApiResponse(responseCode = "400", description = "Invalid image file."),
+                        @ApiResponse(responseCode = "403", description = "Forbidden."),
+                        @ApiResponse(responseCode = "404", description = "Product not found.")
+        })
+        @PreAuthorize("hasAnyRole('ADMIN','MANAGER') or hasAuthority('product:update')")
+        @PostMapping("/api/v1/admin/products/{productId}/images")
+        public ResponseEntity<ImageDTO> uploadAdminProductImage(
+                        @PathVariable Long productId,
+                        @RequestParam("file") MultipartFile file) throws IOException {
+                return ResponseEntity.ok(new ImageDTO(imageService.saveProductImage(productId, file)));
+        }
+
+        @Operation(summary = "Update product image display metadata")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Image metadata updated."),
+                        @ApiResponse(responseCode = "400", description = "Invalid metadata."),
+                        @ApiResponse(responseCode = "403", description = "Forbidden."),
+                        @ApiResponse(responseCode = "404", description = "Product image not found.")
+        })
+        @PreAuthorize("hasAnyRole('ADMIN','MANAGER') or hasAuthority('product:update')")
+        @PatchMapping("/api/v1/admin/products/{productId}/images/{imageId}")
+        public ResponseEntity<ImageDTO> patchAdminProductImage(
+                        @PathVariable Long productId,
+                        @PathVariable Long imageId,
+                        @RequestBody ImageUpdateDTO update) {
+                return ResponseEntity.ok(new ImageDTO(imageService.updateProductImage(productId, imageId, update)));
+        }
+
+        @Operation(summary = "Delete an admin product image")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "204", description = "Image deleted."),
+                        @ApiResponse(responseCode = "403", description = "Forbidden."),
+                        @ApiResponse(responseCode = "404", description = "Product image not found.")
+        })
+        @PreAuthorize("hasAnyRole('ADMIN','MANAGER') or hasAuthority('product:update')")
+        @DeleteMapping("/api/v1/admin/products/{productId}/images/{imageId}")
+        public ResponseEntity<Void> deleteAdminProductImage(
+                        @PathVariable Long productId,
+                        @PathVariable Long imageId) {
+                imageService.deleteProductImage(productId, imageId);
+                return ResponseEntity.noContent().build();
+        }
 
     // Endpoint to upload an image
     @Operation(summary = "Upload Product Image", description = "Upload an image for a product with its name and type.")
@@ -27,7 +75,7 @@ public class ImageController {
             @ApiResponse(responseCode = "200", description = "Image uploaded successfully."),
             @ApiResponse(responseCode = "400", description = "Invalid image file or data.")
     })
-    @PostMapping("/upload")
+        @PostMapping("/api/v1/images/upload")
     public ResponseEntity<String> uploadImage(@RequestParam("file") MultipartFile file,
                                               @RequestParam("imageName") String imageName,
                                               @RequestParam("imageType") String imageType) throws IOException {
@@ -42,7 +90,7 @@ public class ImageController {
             @ApiResponse(responseCode = "200", description = "Product image retrieved successfully."),
             @ApiResponse(responseCode = "404", description = "Image not found.")
     })
-    @GetMapping("/{imageId}")
+        @GetMapping("/api/v1/images/{imageId}")
     public ResponseEntity<ByteArrayResource> getImage(@PathVariable Long imageId) {
         Image image = imageService.getImage(imageId);
 
@@ -60,7 +108,7 @@ public class ImageController {
             @ApiResponse(responseCode = "200", description = "Image deleted successfully."),
             @ApiResponse(responseCode = "404", description = "Image not found.")
     })
-    @DeleteMapping("/{imageId}")
+        @DeleteMapping("/api/v1/images/{imageId}")
     public ResponseEntity<String> deleteImage(@PathVariable Long imageId) {
         imageService.deleteImage(imageId);
         return ResponseEntity.ok("Image deleted successfully");
@@ -73,7 +121,7 @@ public class ImageController {
             @ApiResponse(responseCode = "404", description = "Image not found."),
             @ApiResponse(responseCode = "400", description = "Invalid image file or data.")
     })
-    @PutMapping("/{imageId}/update")
+        @PutMapping("/api/v1/images/{imageId}/update")
     public ResponseEntity<String> updateProductImage(@PathVariable Long imageId,
                                                      @RequestParam("file") MultipartFile newImageFile) throws IOException {
 

@@ -16,6 +16,9 @@ public class AddressDTO {
     private String postalCode;
     private String userId; // To map the associated user
 
+    public AddressDTO() {
+    }
+
     public AddressDTO(Address address) {
         this.id = address.getAddressId();
         this.street = address.getStreet();

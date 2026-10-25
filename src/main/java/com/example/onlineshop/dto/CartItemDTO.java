@@ -12,11 +12,21 @@ public class CartItemDTO {
     private Long inventoryId;
     private int quantity;
     private double priceAtAdd;
+    private double currentPrice;
+    private int availableQuantity;
+    private boolean stockWarning;
+    private boolean unavailable;
 
     public CartItemDTO (CartItem cartItem) {
         this.cartItemId = cartItem.getCartItemId();
         this.inventoryId = cartItem.getInventory().getInventoryId();
         this.quantity = cartItem.getQuantity();
         this.priceAtAdd = cartItem.getInventory().getSellingPrice();
+        this.currentPrice = cartItem.getInventory().getSellingPrice();
+        boolean productAvailable = cartItem.getInventory().getSku().isActive()
+                && cartItem.getInventory().getSku().getProduct().isApproved();
+        this.availableQuantity = productAvailable ? cartItem.getInventory().getStockAvailable() : 0;
+        this.stockWarning = quantity > availableQuantity;
+        this.unavailable = !productAvailable || availableQuantity == 0;
     }
 }

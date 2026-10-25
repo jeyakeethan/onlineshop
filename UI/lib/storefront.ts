@@ -1,0 +1,16 @@
+export type InventoryDTO = { inventoryId?: number; skuId?: number; costPrice?: number; sellingPrice?: number; stockAvailable?: number }
+export type SKUDTO = { size?: string; color?: string; skuCode?: string; productId?: number; inventoryDTOS?: InventoryDTO[] }
+export type ProductDTO = { productId: number; name: string; description?: string; categoryDTO?: { category?: string; subcategory?: string }; skuDTOs?: SKUDTO[]; isAvailable?: boolean; approved?: boolean; image?: string }
+
+export const mockProducts: ProductDTO[] = [
+  { productId: 1, name: 'Linen overshirt', description: 'A relaxed layer cut from breathable European linen.', categoryDTO: { category: 'Apparel', subcategory: 'Outerwear' }, isAvailable: true, approved: true, image: 'https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?auto=format&fit=crop&w=900&q=85', skuDTOs: [{ size: 'S', color: 'Oat', skuCode: 'LO-S-OAT', inventoryDTOS: [{ inventoryId: 101, sellingPrice: 128, stockAvailable: 8 }] }, { size: 'M', color: 'Ink', skuCode: 'LO-M-INK', inventoryDTOS: [{ inventoryId: 102, sellingPrice: 128, stockAvailable: 4 }] }] },
+  { productId: 2, name: 'Form ceramic set', description: 'Hand-thrown vessels that bring a quiet rhythm to the table.', categoryDTO: { category: 'Home', subcategory: 'Tabletop' }, isAvailable: true, approved: true, image: 'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=900&q=85', skuDTOs: [{ size: 'Set of 3', color: 'Clay', inventoryDTOS: [{ inventoryId: 201, sellingPrice: 86, stockAvailable: 12 }] }] },
+  { productId: 3, name: 'Daily tote', description: 'A durable canvas carryall for everyday errands and escapes.', categoryDTO: { category: 'Accessories', subcategory: 'Bags' }, isAvailable: true, approved: true, image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=900&q=85', skuDTOs: [{ size: 'One size', color: 'Natural', inventoryDTOS: [{ inventoryId: 301, sellingPrice: 64, stockAvailable: 2 }] }] },
+  { productId: 4, name: 'Field notes', description: 'A linen-bound journal for lists, sketches, and ideas.', categoryDTO: { category: 'Stationery', subcategory: 'Paper goods' }, isAvailable: false, approved: true, image: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=900&q=85', skuDTOs: [{ size: 'A5', color: 'Moss', inventoryDTOS: [{ inventoryId: 401, sellingPrice: 24, stockAvailable: 0 }] }] },
+]
+
+export async function getProducts(): Promise<ProductDTO[]> { try { const res = await fetch('/api/bff/products'); if (!res.ok) throw new Error('Request failed'); return res.json() } catch { return mockProducts } }
+export async function getProduct(id: string): Promise<ProductDTO | undefined> { try { const res = await fetch(`/api/bff/products/${id}`); if (!res.ok) throw new Error('Request failed'); return res.json() } catch { return mockProducts.find((p) => p.productId === Number(id)) } }
+export function price(product: ProductDTO) { return product.skuDTOs?.[0]?.inventoryDTOS?.[0]?.sellingPrice ?? 0 }
+export function imageFor(product: ProductDTO) { return product.image ?? 'https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?auto=format&fit=crop&w=900&q=85' }
+export function money(value: number) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value) }

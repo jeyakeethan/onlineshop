@@ -23,6 +23,7 @@ public class UserDTO {
     private String dob;
     private List<String> roles;
     private LocalDate lastLoginTime;
+    private boolean emailVerified;
 
     public UserDTO(User user) {
         this.email = user.getEmail();
@@ -38,8 +39,4 @@ public class UserDTO {
         this.lastLoginTime = user.getLastLoginTime();
     }
 
-    // Getter & Setter for userId (mapped to email)
-    public String getUserId() {
-        return this.email;
-    }
 }

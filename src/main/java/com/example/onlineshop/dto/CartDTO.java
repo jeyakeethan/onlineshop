@@ -16,8 +16,14 @@ public class CartDTO {
     private List<CartItemDTO> cartItems;
 
     public CartDTO(Cart cart) {
-        this.cartId = cart.getCartId();
-        this.userId = cart.getUser().getEmail();
-        this.cartItems = cart.getCartItems().stream().map(CartItemDTO::new).toList();
+        this(cart, cart == null || cart.getUser() == null ? null : cart.getUser().getEmail());
+    }
+
+    public CartDTO(Cart cart, String userId) {
+        this.cartId = cart == null ? null : cart.getCartId();
+        this.userId = userId;
+        this.cartItems = cart == null || cart.getCartItems() == null
+                ? List.of()
+                : cart.getCartItems().stream().map(CartItemDTO::new).toList();
     }
 }

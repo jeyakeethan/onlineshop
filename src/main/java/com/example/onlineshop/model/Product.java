@@ -2,7 +2,9 @@ package com.example.onlineshop.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.io.Serializable;
 
 import java.util.List;
 
@@ -10,7 +12,10 @@ import java.util.List;
 @Table(name = "products")
 @Getter
 @Setter
-public class Product {
+@NoArgsConstructor
+public class Product implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,17 +23,26 @@ public class Product {
 
     private String name;
     private String description;
+    private String slug;
     private boolean approved;
+    private boolean available;
 
     @ManyToOne
-    @JoinColumn(name = "category", referencedColumnName = "subcategory", nullable = false)// Foreign key for category
+        @JoinColumns({
+            @JoinColumn(name = "category", referencedColumnName = "category", nullable = false),
+            @JoinColumn(name = "subcategory", referencedColumnName = "subcategory", nullable = false)
+        })
     private Category category;  // Subcategory as a Category entity
 
+    @ManyToOne
+    @JoinColumn(name = "brand_id")
+    private Brand brand;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)  // Mapping to SKUs (one-to-many relationship)
-    private List<SKU> skus;  // SKU details for the product
+    private List<SKU> skus = new java.util.ArrayList<>();  // SKU details for the product
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Review> reviews;
+    private List<Review> reviews = new java.util.ArrayList<>();
 
     private boolean isAvailable;
 
