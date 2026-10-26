@@ -23,6 +23,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -70,6 +71,29 @@ class TokenSessionTest {
         verify(tokenSessionRepository).existsByTokenIdAndUserEmailAndRevokedAtIsNullAndExpiresAtAfter(
                 org.mockito.ArgumentMatchers.eq("token-id"),
                 org.mockito.ArgumentMatchers.eq("admin@example.com"), any());
+    }
+
+    @Test
+    void isTokenActive_rejectsExpiredOrRevokedSession() {
+        when(jwtUtil.extractTokenId("expired-token")).thenReturn("expired-id");
+        when(tokenSessionRepository.existsByTokenIdAndUserEmailAndRevokedAtIsNullAndExpiresAtAfter(
+                any(), any(), any())).thenReturn(false);
+
+        assertFalse(userService.isTokenActive("expired-token", "admin@example.com"));
+    }
+
+    @Test
+    void revokeToken_isSafeWhenSessionWasAlreadyRevokedOrRemoved() {
+        when(jwtUtil.extractTokenId("missing-token")).thenReturn("missing-id");
+        when(jwtUtil.extractUsername("missing-token")).thenReturn("admin@example.com");
+        when(tokenSessionRepository.findByTokenIdAndUserEmailAndRevokedAtIsNull(
+                "missing-id", "admin@example.com")).thenReturn(Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                org.springframework.web.server.ResponseStatusException.class,
+                () -> userService.revokeToken("missing-token"));
+
+        org.mockito.Mockito.verify(tokenSessionRepository, org.mockito.Mockito.never()).save(any());
     }
 
     @Test

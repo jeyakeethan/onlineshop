@@ -144,6 +144,7 @@ public class StandardDataInitializer implements CommandLineRunner {
                 "product:create", "product:update", "product:delete", "product:stock", "product:approve",
                 "order:read", "order:update", "user:create", "user:read", "user:update", "user:delete",
                 "role:create", "role:read", "role:update", "role:delete", "role:assign",
+                "settings:read", "settings:update", "dashboard:read", "audit:read",
                 "profile:update", "account:deactivate", "account:delete", "account:anonymize");
         return names.stream().collect(java.util.stream.Collectors.toMap(name -> name, this::permission));
     }

@@ -18,6 +18,7 @@ import lombok.Getter;
 import lombok.Setter;
 import jakarta.persistence.*;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Entity
 @Getter
@@ -46,10 +47,22 @@ public class Review implements Serializable {
     @Max(5)
     private Integer rating;
 
+    @Column(length = 32)
+    private String moderationStatus = "PENDING";
+
+    @Column(length = 500)
+    private String moderationReason;
+
+    @Column(length = 255)
+    private String moderatedBy;
+
+    private LocalDateTime moderatedAt;
+
     public Review(String userId, Product product, String reviewText, Integer rating) {
         this.userId = userId;
         this.product = product;
         this.reviewText = reviewText;
         this.rating = rating;
+        this.moderationStatus = "PENDING";
     }
 }

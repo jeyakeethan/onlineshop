@@ -12,6 +12,7 @@ import com.example.onlineshop.order.dto.MockPaymentCompletionDTO;
 import com.example.onlineshop.order.dto.MockPaymentCompletionRequest;
 import com.example.onlineshop.order.dto.OrderRequestDTO;
 import com.example.onlineshop.order.service.AsyncOrderService;
+import com.example.onlineshop.order.service.PaymentStatusService;
 import com.example.onlineshop.common.service.BuyerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -36,6 +37,9 @@ public class OrderController {
     private final BuyerService buyerService;
     
     private final AsyncOrderService asyncOrderService;
+
+    private final PaymentStatusService paymentStatusService;
+
 
     @Operation(summary = "Server-authoritative checkout quote", description = "Return itemized totals, taxes, coupon preview and shipping method for the current cart.")
     @ApiResponses(value = {
@@ -129,6 +133,34 @@ public class OrderController {
         return buyerService.getOrderById(orderId);
     }
 
+    @Operation(summary = "Get payment status for my order",
+            description = "Return payment state for frontend polling without allowing client-driven success transitions.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Payment status returned."),
+            @ApiResponse(responseCode = "401", description = "Unauthorized."),
+            @ApiResponse(responseCode = "403", description = "The order belongs to another customer."),
+            @ApiResponse(responseCode = "404", description = "Order not found.")
+    })
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{orderId}/payment-status")
+    public com.example.onlineshop.order.dto.PaymentStatusDTO getPaymentStatus(@PathVariable Long orderId) {
+        return paymentStatusService.getStatus(orderId);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/{orderId}/returns")
+    public List<com.example.onlineshop.order.dto.ReturnRequestDTO> getOwnReturns(@PathVariable Long orderId) {
+        return buyerService.getOwnReturnRequests(orderId);
+    }
+
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/{orderId}/returns")
+    public com.example.onlineshop.order.dto.ReturnRequestDTO createReturn(
+            @PathVariable Long orderId,
+            @RequestBody com.example.onlineshop.order.dto.ReturnRequestCreateDTO request) {
+        return buyerService.createReturnRequest(orderId, request);
+    }
+
     @Operation(summary = "Get an immutable order receipt", description = "Return the customer's receipt using the financial and line-item snapshots stored on the order.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Receipt returned."),
@@ -157,6 +189,7 @@ public class OrderController {
             @RequestBody MockPaymentCompletionRequest request) {
         return asyncOrderService.completeMockPayment(request, authorizationToken);
     }
+
 
     @Operation(summary = "Cancel an order", description = "Cancel an eligible customer order and release its reservation.")
     @ApiResponses(value = {

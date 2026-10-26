@@ -16,12 +16,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class ReportService {
+    private static final int MAX_ORDER_REPORT_ROWS = 10_000;
+    private static final int MAX_ORDER_REPORT_DAYS = 366;
+    private static final int MAX_INVENTORY_REPORT_ROWS = 10_000;
 
     @Autowired
     private ProductRepository productRepository;
@@ -48,6 +54,66 @@ public class ReportService {
     public String getProductStats() {
         List<ProductDTO> productReport = generateProductReport();
         return formatAsJson(productReport);
+    }
+
+    public String getOrderReportCsv(LocalDate from, LocalDate to) {
+        LocalDate effectiveTo = to == null ? LocalDate.now() : to;
+        LocalDate effectiveFrom = from == null ? effectiveTo.minusDays(30) : from;
+        if (effectiveFrom.isAfter(effectiveTo)) {
+            throw new IllegalArgumentException("Report start date must not be after end date");
+        }
+        if (effectiveFrom.plusDays(MAX_ORDER_REPORT_DAYS).isBefore(effectiveTo)) {
+            throw new IllegalArgumentException("Report date range cannot exceed 366 days");
+        }
+
+        List<Order> orders = orderRepository.findByOrderDateBetween(
+                effectiveFrom, effectiveTo,
+                PageRequest.of(0, MAX_ORDER_REPORT_ROWS,
+                        Sort.by(Sort.Direction.ASC, "orderDate").and(Sort.by(Sort.Direction.ASC, "orderId"))))
+                .getContent();
+        StringBuilder csv = new StringBuilder("orderId,orderDate,orderStatus,paymentStatus,totalPrice,customerEmail\n");
+        for (Order order : orders) {
+            csv.append(csv(order.getOrderId()))
+                    .append(',').append(csv(order.getOrderDate()))
+                    .append(',').append(csv(order.getOrderStatus()))
+                    .append(',').append(csv(order.getPaymentStatus()))
+                    .append(',').append(csv(order.getTotalPrice()))
+                    .append(',').append(csv(order.getUser() == null ? null : order.getUser().getEmail()))
+                    .append('\n');
+        }
+        return csv.toString();
+    }
+
+    public String getInventoryReportCsv() {
+        List<Inventory> inventories = inventoryRepository.findAll(
+                PageRequest.of(0, MAX_INVENTORY_REPORT_ROWS,
+                        Sort.by(Sort.Direction.ASC, "inventoryId"))).getContent();
+        StringBuilder csv = new StringBuilder(
+                "inventoryId,variantId,skuCode,onHand,reserved,available,lowStockThreshold,lowStock,sellingPrice\n");
+        for (Inventory inventory : inventories) {
+            int available = inventory.getStockAvailable();
+            int reserved = inventory.getReservedQuantity();
+            csv.append(csv(inventory.getInventoryId()))
+                    .append(',').append(csv(inventory.getSku() == null ? null : inventory.getSku().getSkuId()))
+                    .append(',').append(csv(inventory.getSku() == null ? null : inventory.getSku().getSkuCode()))
+                    .append(',').append(csv(available + reserved))
+                    .append(',').append(csv(reserved))
+                    .append(',').append(csv(available))
+                    .append(',').append(csv(inventory.getLowStockThreshold()))
+                    .append(',').append(csv(available <= inventory.getLowStockThreshold()))
+                    .append(',').append(csv(inventory.getSellingPrice()))
+                    .append('\n');
+        }
+        return csv.toString();
+    }
+
+    private String csv(Object value) {
+        if (value == null) return "";
+        String text = String.valueOf(value);
+        if (text.indexOf(',') >= 0 || text.indexOf('"') >= 0 || text.indexOf('\n') >= 0 || text.indexOf('\r') >= 0) {
+            return "\"" + text.replace("\"", "\"\"") + "\"";
+        }
+        return text;
     }
 
     // Convert any report object to JSON String

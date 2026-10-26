@@ -14,6 +14,8 @@ import com.example.onlineshop.user.entity.*;
 import com.example.onlineshop.user.repository.*;
 import com.example.onlineshop.wishlist.entity.*;
 import com.example.onlineshop.wishlist.repository.*;
+import com.example.onlineshop.notification.dto.NotificationDTO;
+import com.example.onlineshop.notification.repository.NotificationRepository;
 import com.example.onlineshop.common.security.AuthenticationHelper;
 import com.example.onlineshop.user.service.EmailService;
 import com.example.onlineshop.user.service.UserService;
@@ -60,6 +62,9 @@ public class BuyerService {
     private OrderRepository orderRepository;
 
     @Autowired
+    private ReturnRequestRepository returnRequestRepository;
+
+    @Autowired
     private InventoryRepository inventoryRepository;
 
     @Autowired
@@ -91,6 +96,9 @@ public class BuyerService {
 
     @Autowired
     private WishListRepository wishListRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     private static final Set<String> processedGuestCartTokens = ConcurrentHashMap.newKeySet();
     private static final Map<String, GuestLookupChallenge> guestLookupChallenges = new ConcurrentHashMap<>();
@@ -241,8 +249,49 @@ public class BuyerService {
         productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
         return reviewRepository.findByProductId(productId).stream()
-                .filter(review -> review != null && review.getRating() != null)
+                .filter(review -> review != null && review.getRating() != null
+                        && !"DELETED".equalsIgnoreCase(review.getModerationStatus())
+                        && !"HIDDEN".equalsIgnoreCase(review.getModerationStatus()))
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<MyReviewDTO> getOwnReviews() {
+        String userId = authenticationHelper.getCurrentUserId();
+        return reviewRepository.findByUserIdOrderByIdDesc(userId).stream()
+                .filter(review -> review != null)
+                .map(MyReviewDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Page<NotificationDTO> getOwnNotifications(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Page must be non-negative and size must be between 1 and 100");
+        }
+        String userId = authenticationHelper.getCurrentUserId();
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(page, size))
+                .map(NotificationDTO::new);
+    }
+
+    @Transactional
+    public NotificationDTO markOwnNotificationRead(Long notificationId) {
+        String userId = authenticationHelper.getCurrentUserId();
+        com.example.onlineshop.notification.entity.Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
+        if (!userId.equalsIgnoreCase(notification.getUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not own this notification");
+        }
+        if (!notification.isRead()) {
+            notification.setRead(true);
+            notificationRepository.save(notification);
+        }
+        return new NotificationDTO(notification);
+    }
+
+    @Transactional
+    public int markAllOwnNotificationsRead() {
+        return notificationRepository.markAllAsReadByUserId(authenticationHelper.getCurrentUserId());
     }
 
     public List<String> getSearchSuggestions(String query) {
@@ -538,6 +587,7 @@ public class BuyerService {
         Order order = new Order();
         order.setOrderDate(LocalDate.now());
         order.setOrderStatus("NEW");
+        order.setReservationExpiresAt(LocalDateTime.now().plusMinutes(30));
         order.setUser(user);
 
         // Set order items
@@ -577,6 +627,61 @@ public class BuyerService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
         return new OrderDTO(order);
+    }
+
+    @Transactional
+    public List<ReturnRequestDTO> getOwnReturnRequests(Long orderId) {
+        String userId = authenticationHelper.getCurrentUserId();
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if (order.getUser() == null || !userId.equalsIgnoreCase(order.getUser().getEmail())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not own this order");
+        }
+        return returnRequestRepository.findByOrder_OrderIdAndOrder_User_EmailIgnoreCaseOrderByRequestedAtDesc(orderId, userId)
+                .stream().map(ReturnRequestDTO::new).toList();
+    }
+
+    @Transactional
+    public ReturnRequestDTO createReturnRequest(Long orderId, ReturnRequestCreateDTO request) {
+        String userId = authenticationHelper.getCurrentUserId();
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if (order.getUser() == null || !userId.equalsIgnoreCase(order.getUser().getEmail())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not own this order");
+        }
+        if (!("DELIVERED".equalsIgnoreCase(order.getOrderStatus())
+                || "COMPLETED".equalsIgnoreCase(order.getOrderStatus()))) {
+            throw new IllegalStateException("Only delivered orders are eligible for returns");
+        }
+        if (request == null || request.getItems() == null || request.getItems().isEmpty()) {
+            throw new IllegalArgumentException("At least one return item is required");
+        }
+        ReturnRequest returnRequest = new ReturnRequest();
+        returnRequest.setOrder(order);
+        String requestReason = request.getReason() == null ? "" : request.getReason().trim();
+        returnRequest.setReason(requestReason.isBlank() ? "Item return requested" : requestReason);
+        java.util.Set<Long> requestedItemIds = new java.util.HashSet<>();
+        for (ReturnItemRequestDTO itemRequest : request.getItems()) {
+            if (itemRequest == null || itemRequest.getOrderItemId() == null
+                    || itemRequest.getQuantity() == null || itemRequest.getQuantity() < 1
+                    || itemRequest.getReason() == null || itemRequest.getReason().isBlank()
+                    || !requestedItemIds.add(itemRequest.getOrderItemId())) {
+                throw new IllegalArgumentException("Each return item requires a unique item, positive quantity and reason");
+            }
+            OrderItem orderItem = order.getOrderItems() == null ? null : order.getOrderItems().stream()
+                    .filter(candidate -> itemRequest.getOrderItemId().equals(candidate.getOrderItemId()))
+                    .findFirst().orElse(null);
+            if (orderItem == null || itemRequest.getQuantity() > orderItem.getQuantity()) {
+                throw new IllegalArgumentException("Return quantity exceeds the purchased quantity");
+            }
+            ReturnRequestItem returnItem = new ReturnRequestItem();
+            returnItem.setReturnRequest(returnRequest);
+            returnItem.setOrderItem(orderItem);
+            returnItem.setQuantity(itemRequest.getQuantity());
+            returnItem.setReason(itemRequest.getReason().trim());
+            returnRequest.getItems().add(returnItem);
+        }
+        return new ReturnRequestDTO(returnRequestRepository.save(returnRequest));
     }
 
     public List<OrderDTO> getUserOrders(String userId) {
@@ -836,6 +941,72 @@ public class BuyerService {
         Review review = new Review(userId, product, reviewText, rating);
         product.getReviews().add(review);
         productRepository.save(product);
+    }
+
+    @Transactional
+    public Review createEligibleReview(Long productId, ReviewCreateDTO request) {
+        String userId = authenticationHelper.getCurrentUserId();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        if (!user.isEmailVerified()) {
+            throw new org.springframework.security.access.AccessDeniedException("Email verification is required to review");
+        }
+        if (request == null || request.getReviewText() == null || request.getReviewText().isBlank()
+                || request.getRating() == null || request.getRating() < 1 || request.getRating() > 5) {
+            throw new IllegalArgumentException("Review text and a rating from 1 to 5 are required");
+        }
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+        Optional<Review> existingReview = reviewRepository.findByUserIdAndProduct_ProductId(userId, productId);
+        if (existingReview.isPresent()
+                && !"DELETED".equalsIgnoreCase(existingReview.get().getModerationStatus())) {
+            throw new IllegalStateException("You already have a review for this product");
+        }
+        boolean purchased = orderRepository.findByUser_email(userId).stream()
+                .filter(order -> "DELIVERED".equalsIgnoreCase(order.getOrderStatus())
+                        || "COMPLETED".equalsIgnoreCase(order.getOrderStatus()))
+                .flatMap(order -> order.getOrderItems() == null ? java.util.stream.Stream.empty() : order.getOrderItems().stream())
+                .anyMatch(item -> item.getSku() != null && item.getSku().getProduct() != null
+                        && productId.equals(item.getSku().getProduct().getProductId()));
+        if (!purchased) {
+            throw new org.springframework.security.access.AccessDeniedException("A completed purchase is required to review");
+        }
+        Review review = new Review(userId, product, request.getReviewText().trim(), request.getRating());
+        return reviewRepository.save(review);
+    }
+
+    @Transactional
+    public Review updateOwnReview(Long reviewId, ReviewUpdateDTO request) {
+        String userId = authenticationHelper.getCurrentUserId();
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+        if (!userId.equalsIgnoreCase(review.getUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not own this review");
+        }
+        if (request == null || (request.getReviewText() == null && request.getRating() == null)) {
+            throw new IllegalArgumentException("Review text or rating is required");
+        }
+        if (request.getReviewText() != null) {
+            if (request.getReviewText().isBlank()) throw new IllegalArgumentException("Review text cannot be blank");
+            review.setReviewText(request.getReviewText().trim());
+        }
+        if (request.getRating() != null) review.setRating(request.getRating());
+        review.setModerationStatus("PENDING");
+        return reviewRepository.save(review);
+    }
+
+    @Transactional
+    public void deleteOwnReview(Long reviewId) {
+        String userId = authenticationHelper.getCurrentUserId();
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+        if (!userId.equalsIgnoreCase(review.getUserId())) {
+            throw new org.springframework.security.access.AccessDeniedException("You do not own this review");
+        }
+        if (!"DELETED".equalsIgnoreCase(review.getModerationStatus())) {
+            review.setModerationStatus("DELETED");
+            reviewRepository.save(review);
+        }
     }
 
     public List<ProductDTO> filterProducts(String category, String keyword) {

@@ -38,6 +38,7 @@ public class AsyncOrderService {
     private final AddressRepository addressRepository;
     private final AuthenticationHelper authenticationHelper;
     private final OrderProducerService producer;
+    private final TransactionalOutboxService outboxService;
 
     @Value("${app.kafka.enabled:false}")
     private boolean kafkaEnabled;
@@ -112,6 +113,7 @@ public class AsyncOrderService {
         Order order = new Order();
         order.setOrderDate(LocalDate.now());
         order.setOrderStatus(OrderEvent.Status.PENDING.name());
+        order.setReservationExpiresAt(java.time.LocalDateTime.now().plusMinutes(30));
         order.setUser(user);
         order.setIdempotencyKey(idempotencyKey);
         order.setOrderItems(orderItems);
@@ -150,7 +152,7 @@ public class AsyncOrderService {
             return Map.of("orderId", order.getOrderId(), "status", order.getOrderStatus());
         }
 
-        producer.publish(event);
+        outboxService.enqueue(event);
         return Map.of("orderId", order.getOrderId(), "status", order.getOrderStatus());
     }
 
@@ -231,7 +233,9 @@ public class AsyncOrderService {
     private void fulfillInternal(OrderEvent event, boolean withRandomFailure) {
         Order order = find(event.getOrderId());
         if (OrderEvent.Status.FULFILLED.name().equals(order.getOrderStatus())
-                || OrderEvent.Status.PAID.name().equals(order.getOrderStatus())) return;
+                || OrderEvent.Status.PAID.name().equals(order.getOrderStatus())
+                || OrderEvent.Status.FAILED.name().equals(order.getOrderStatus())
+                || "EXPIRED".equalsIgnoreCase(order.getOrderStatus())) return;
         if (withRandomFailure) {
             failRandomly("fulfillment");
         }
@@ -242,7 +246,9 @@ public class AsyncOrderService {
 
     private void payInternal(Long orderId, boolean withRandomFailure) {
         Order order = find(orderId);
-        if (OrderEvent.Status.PAID.name().equals(order.getOrderStatus())) return;
+        if (OrderEvent.Status.PAID.name().equals(order.getOrderStatus())
+                || OrderEvent.Status.FAILED.name().equals(order.getOrderStatus())
+                || "EXPIRED".equalsIgnoreCase(order.getOrderStatus())) return;
         if (withRandomFailure) {
             failRandomly("payment");
         }
@@ -254,6 +260,10 @@ public class AsyncOrderService {
 
     public void fail(Long orderId) {
         Order order = find(orderId);
+        if (OrderEvent.Status.PAID.name().equals(order.getOrderStatus())
+                || OrderEvent.Status.FULFILLED.name().equals(order.getOrderStatus())
+                || OrderEvent.Status.FAILED.name().equals(order.getOrderStatus())
+                || "EXPIRED".equalsIgnoreCase(order.getOrderStatus())) return;
         order.setOrderStatus(OrderEvent.Status.FAILED.name());
         orderRepository.save(order);
     }

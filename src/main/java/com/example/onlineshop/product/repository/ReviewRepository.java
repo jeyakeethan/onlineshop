@@ -12,4 +12,7 @@ import java.util.List;
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Query("select review from Review review where review.product.productId = :productId")
     List<Review> findByProductId(@Param("productId") Long productId);
+    java.util.Optional<Review> findByUserIdAndProduct_ProductId(String userId, Long productId);
+    List<Review> findByUserIdOrderByIdDesc(String userId);
+    List<Review> findAllByOrderByIdDesc();
 }

@@ -18,6 +18,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -352,6 +355,14 @@ public class UserService implements UserDetailsService {
         return userRepository.findAll().stream()
                 .map(UserDTO::new)
                 .collect(Collectors.toList());
+    }
+
+    public Page<UserDTO> getAllUsers(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Page must be non-negative and size must be between 1 and 100");
+        }
+        return userRepository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "email")))
+                .map(UserDTO::new);
     }
 
     @Override

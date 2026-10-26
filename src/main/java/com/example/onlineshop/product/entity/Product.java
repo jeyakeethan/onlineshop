@@ -55,4 +55,10 @@ public class Product implements Serializable {
 
     private boolean isAvailable;
 
+    @Column(nullable = false)
+    private Integer reviewCount = 0;
+
+    @Column(nullable = false)
+    private Double averageRating = 0.0;
+
 }

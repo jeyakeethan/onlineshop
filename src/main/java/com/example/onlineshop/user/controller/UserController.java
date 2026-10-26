@@ -25,6 +25,8 @@ import com.example.onlineshop.product.dto.VariantUpdateDTO;
 import com.example.onlineshop.user.dto.ForgotPasswordRequest;
 import com.example.onlineshop.user.dto.ForgotPasswordResponse;
 import com.example.onlineshop.product.dto.ProductDTO;
+import com.example.onlineshop.product.dto.MyReviewDTO;
+import com.example.onlineshop.notification.dto.NotificationDTO;
 import com.example.onlineshop.user.dto.ResetPasswordRequest;
 import com.example.onlineshop.user.dto.ResetPasswordResponse;
 import com.example.onlineshop.user.dto.RoleDTO;
@@ -225,6 +227,36 @@ public class UserController {
     @GetMapping("/api/v1/me")
     public UserDTO getCurrentUserProfile() {
         return buyerService.getUserProfile();
+    }
+
+    @Operation(summary = "List reviews submitted by the current user")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/api/v1/me/reviews")
+    public List<MyReviewDTO> getCurrentUserReviews() {
+        return buyerService.getOwnReviews();
+    }
+
+    @Operation(summary = "List current user notifications")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/api/v1/me/notifications")
+    public Page<NotificationDTO> getCurrentUserNotifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return buyerService.getOwnNotifications(page, size);
+    }
+
+    @Operation(summary = "Mark a current user notification as read")
+    @PreAuthorize("isAuthenticated()")
+    @PatchMapping("/api/v1/me/notifications/{notificationId}/read")
+    public NotificationDTO markCurrentUserNotificationRead(@PathVariable Long notificationId) {
+        return buyerService.markOwnNotificationRead(notificationId);
+    }
+
+    @Operation(summary = "Mark all current user notifications as read")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/api/v1/me/notifications/mark-all-read")
+    public int markAllCurrentUserNotificationsRead() {
+        return buyerService.markAllOwnNotificationsRead();
     }
 
     @Operation(summary = "Update current user profile")

@@ -10,6 +10,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.time.LocalDate;
 
 @Tag(name = "Reports", description = "Analytics and administrative metrics")
 @RestController
@@ -50,5 +57,29 @@ public class AdminReportController {
     @GetMapping("/products")
     public String getProductStats() {
         return reportService.getProductStats();
+    }
+
+    @Operation(summary = "Download order report", description = "Download a bounded CSV order report for a date range.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER') or hasAuthority('report:read')")
+    @GetMapping(value = "/orders", produces = "text/csv")
+    public ResponseEntity<String> getOrderReport(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        String csv = reportService.getOrderReportCsv(from, to);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=orders.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv);
+    }
+
+    @Operation(summary = "Download inventory report", description = "Download a bounded CSV inventory report.")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER') or hasAuthority('report:read')")
+    @GetMapping(value = "/inventory", produces = "text/csv")
+    public ResponseEntity<String> getInventoryReport() {
+        String csv = reportService.getInventoryReportCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=inventory.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(csv);
     }
 }

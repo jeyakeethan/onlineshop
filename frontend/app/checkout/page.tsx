@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CartDTO, OrderDTO } from '../../types/api'
+import { CartDTO } from '../../types/api'
 import { formatMoney } from '../../lib/storefront'
 
 export default function CheckoutPage() {
@@ -24,12 +24,12 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (!orderId) return
     const poll = async () => {
-      const res = await fetch(`/api/orders/${orderId}`)
+      const res = await fetch(`/api/orders/${orderId}/payment-status`)
       if (!res.ok) return
-      const order: OrderDTO = await res.json()
-      if (order.orderStatus === 'FULFILLED') setStatus('Items reserved. Processing payment...')
-      if (order.orderStatus === 'PAID') router.push('/checkout/success')
-      if (order.orderStatus === 'FAILED') router.push('/checkout/failed')
+      const payment = await res.json()
+      if (payment.paymentStatus === 'REQUIRES_PAYMENT') setStatus('Items reserved. Processing payment...')
+      if (payment.paymentStatus === 'PAID') router.push('/checkout/success')
+      if (payment.paymentStatus === 'FAILED' || payment.paymentStatus === 'EXPIRED') router.push('/checkout/failed')
     }
     poll()
     const timer = window.setInterval(poll, 2500)
@@ -52,10 +52,19 @@ export default function CheckoutPage() {
         paymentMethod,
       }
       const res = await fetch('/api/orders', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(order) })
-      if (res.status === 202) {
+      if (res.status === 201 || res.status === 202) {
         const data = await res.json()
+        const intent = await fetch('/api/payments/intents', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'Idempotency-Key': `payment-${data.orderId}` },
+          body: JSON.stringify({ orderId: data.orderId, provider: 'mock' })
+        })
+        if (!intent.ok) {
+          setStatus('The order was created, but payment setup is unavailable. Please try again.')
+          return
+        }
         setOrderId(data.orderId)
-        setStatus('Reserving items and securing your checkout...')
+        setStatus('Payment intent created. Confirming your order...')
       } else {
         const txt = await res.text()
         setStatus('Error: ' + txt)

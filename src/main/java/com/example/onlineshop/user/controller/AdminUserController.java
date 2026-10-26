@@ -1,7 +1,10 @@
 package com.example.onlineshop.user.controller;
 
+import jakarta.validation.Valid;
 import com.example.onlineshop.user.dto.RoleDTO;
 import com.example.onlineshop.user.dto.UserDTO;
+import com.example.onlineshop.user.dto.UserRolesUpdateDTO;
+import com.example.onlineshop.user.dto.RolePermissionsUpdateDTO;
 import com.example.onlineshop.common.service.BuyerService;
 import com.example.onlineshop.user.service.RoleService;
 import com.example.onlineshop.user.service.UserService;
@@ -10,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -32,7 +36,10 @@ public class AdminUserController {
 
     @PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('user:read')")
     @GetMapping("/users")
-    public List<UserDTO> getAllUsers() { return userService.getAllUsers(); }
+    public Page<UserDTO> getAllUsers(@RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "20") int size) {
+        return userService.getAllUsers(page, size);
+    }
 
     @PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('user:read')")
     @GetMapping("/users/{userId}")
@@ -54,6 +61,12 @@ public class AdminUserController {
     @DeleteMapping("/users/{userId}/roles/{roleId}")
     public String removeRole(@PathVariable String userId, @PathVariable Long roleId) { roleService.removeRoleFromUser(userId, roleId); return "Role removed from user successfully."; }
 
+    @PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('role:assign')")
+    @PatchMapping("/users/{userId}/roles")
+    public UserDTO updateRoles(@PathVariable String userId, @Valid @RequestBody UserRolesUpdateDTO request) {
+        return roleService.updateUserRoles(userId, request.getRoles());
+    }
+
     @PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('role:create')")
     @PostMapping("/roles")
     public String createRole(@RequestBody RoleDTO roleDTO) { roleService.createRole(roleDTO); return "Role created successfully."; }
@@ -61,6 +74,13 @@ public class AdminUserController {
     @PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('role:read')")
     @GetMapping("/roles")
     public List<RoleDTO> getAllRoles() { return roleService.getAllRoles(); }
+
+    @PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('role:update')")
+    @PatchMapping("/roles/{roleId}/permissions")
+    public RoleDTO updateRolePermissions(@PathVariable Long roleId,
+                                         @Valid @RequestBody RolePermissionsUpdateDTO request) {
+        return roleService.updateRolePermissions(roleId, request.getPermissions());
+    }
 
     @PreAuthorize("hasAnyRole('ADMIN') or hasAuthority('role:read')")
     @GetMapping("/roles/{roleId}")

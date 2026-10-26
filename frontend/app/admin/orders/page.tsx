@@ -14,7 +14,8 @@ export default function AdminOrdersPage() {
   async function load() {
     const response = await fetch('/api/orders/admin', { cache: 'no-store' })
     if (!response.ok) throw new Error()
-    setOrders(await response.json())
+    const data = await response.json()
+    setOrders(Array.isArray(data) ? data : data.content || [])
     setMessage('')
   }
 

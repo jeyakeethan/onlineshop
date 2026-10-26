@@ -41,11 +41,25 @@ public class SecurityConfig {
                     "/api/v1/auth/verify-email",
                     "/api/v1/auth/verification/resend",
                     "/api/v1/guest-orders/lookup/request",
-                    "/api/v1/guest-orders/lookup/verify").permitAll()
+                    "/api/v1/guest-orders/lookup/verify",
+                    "/api/v1/guest-tickets/verification/request",
+                    "/api/v1/guest-tickets/verification/verify",
+                    "/api/v1/contact",
+                    "/api/v1/payments/webhooks/**").permitAll()
                 .requestMatchers(HttpMethod.GET,
                     "/api/v1/auth/google/start",
                     "/api/v1/auth/google/callback").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                .requestMatchers("/actuator/metrics", "/actuator/metrics/**")
+                    .hasAnyRole("ADMIN", "ADMINISTRATOR")
+                .requestMatchers(HttpMethod.GET,
+                    "/api/v1/products/**",
+                    "/api/v1/categories/**",
+                    "/api/v1/search",
+                    "/api/v1/homepage",
+                    "/api/v1/brands",
+                    "/api/v1/pages/**",
+                    "/api/v1/images/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/guest-orders/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").authenticated()
                         .requestMatchers("/index.html", "/").permitAll()

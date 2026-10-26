@@ -1,0 +1,9 @@
+package com.example.onlineshop.support.repository;
+
+import com.example.onlineshop.support.entity.TicketMessage;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface TicketMessageRepository extends JpaRepository<TicketMessage, Long> {
+    List<TicketMessage> findByTicketIdOrderByCreatedAtAscMessageIdAsc(Long ticketId);
+}

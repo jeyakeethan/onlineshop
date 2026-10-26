@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,8 +33,10 @@ import java.util.stream.Collectors;
 import java.net.URI;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import com.example.onlineshop.common.security.AuthenticationHelper;
 import com.example.onlineshop.product.service.ProductService;
+import com.example.onlineshop.user.service.EmailService;
 
 @Service
 public class AdminService {
@@ -58,6 +61,15 @@ public class AdminService {
 
     @Autowired
     private ProductService productService;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Autowired
+    private ReturnRequestRepository returnRequestRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     @Autowired
     private CategoryRepository categoryRepository;
@@ -192,6 +204,313 @@ public class AdminService {
 
     public List<OrderDTO> getAllOrders() {
         return orderRepository.findAll().stream().map(OrderDTO::new).collect(Collectors.toList());
+    }
+
+    public OrderDTO getAdminOrder(Long orderId) {
+        return new OrderDTO(orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found")));
+    }
+
+    public List<ReturnRequestDTO> getAdminReturns(String status, Boolean eligible) {
+        String normalized = status == null ? null : status.trim().toUpperCase(Locale.ROOT);
+        final String normalizedStatus = normalized == null || normalized.isBlank() ? null : normalized;
+        return returnRequestRepository.findAll().stream()
+                .filter(request -> normalizedStatus == null || normalizedStatus.equalsIgnoreCase(request.getStatus()))
+                .filter(request -> eligible == null || isReturnEligible(request) == eligible)
+                .sorted(java.util.Comparator.comparing(ReturnRequest::getRequestedAt,
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())))
+                .map(ReturnRequestDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<AdminReviewDTO> getAdminReviews(String status) {
+        String normalizedStatus = status == null ? "" : status.trim();
+        if (normalizedStatus.length() > 32) {
+            throw new IllegalArgumentException("Review status is too long");
+        }
+        return reviewRepository.findAllByOrderByIdDesc().stream()
+                .filter(review -> review != null)
+                .filter(review -> normalizedStatus.isBlank()
+                        || normalizedStatus.equalsIgnoreCase(review.getModerationStatus() == null
+                        ? "PENDING" : review.getModerationStatus()))
+                .map(AdminReviewDTO::new)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AdminReviewDTO approveReview(Long reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+        if ("DELETED".equalsIgnoreCase(review.getModerationStatus())) {
+            throw new IllegalStateException("Deleted reviews cannot be approved");
+        }
+        review.setModerationStatus("APPROVED");
+        Review savedReview = reviewRepository.save(review);
+        recalculateReviewAggregate(savedReview.getProduct());
+        return new AdminReviewDTO(savedReview);
+    }
+
+    @Transactional
+    public AdminReviewDTO rejectReview(Long reviewId, String reason) {
+        if (reason == null || reason.isBlank() || reason.trim().length() > 500) {
+            throw new IllegalArgumentException("A rejection reason between 1 and 500 characters is required");
+        }
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+        if ("DELETED".equalsIgnoreCase(review.getModerationStatus())) {
+            throw new IllegalStateException("Deleted reviews cannot be rejected");
+        }
+        review.setModerationStatus("REJECTED");
+        review.setModerationReason(reason.trim());
+        review.setModeratedBy(authenticationHelper.getCurrentUserId());
+        review.setModeratedAt(LocalDateTime.now());
+        Review savedReview = reviewRepository.save(review);
+        recalculateReviewAggregate(savedReview.getProduct());
+        return new AdminReviewDTO(savedReview);
+    }
+
+    @Transactional
+    public AdminReviewDTO hideReview(Long reviewId, String reason) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new IllegalArgumentException("Review not found"));
+        if ("DELETED".equalsIgnoreCase(review.getModerationStatus())) {
+            throw new IllegalStateException("Deleted reviews are already removed");
+        }
+        String normalizedReason = reason == null || reason.isBlank()
+                ? "Hidden by moderation" : reason.trim();
+        if (normalizedReason.length() > 500) {
+            throw new IllegalArgumentException("Hide reason must not exceed 500 characters");
+        }
+        review.setModerationStatus("HIDDEN");
+        review.setModerationReason(normalizedReason);
+        review.setModeratedBy(authenticationHelper.getCurrentUserId());
+        review.setModeratedAt(LocalDateTime.now());
+        Review savedReview = reviewRepository.save(review);
+        recalculateReviewAggregate(savedReview.getProduct());
+        return new AdminReviewDTO(savedReview);
+    }
+
+    private void recalculateReviewAggregate(Product product) {
+        if (product == null || product.getProductId() == null) {
+            throw new IllegalStateException("Review product is missing");
+        }
+        List<Review> approvedReviews = reviewRepository.findByProductId(product.getProductId()).stream()
+                .filter(review -> review != null && review.getRating() != null
+                        && "APPROVED".equalsIgnoreCase(review.getModerationStatus()))
+                .collect(Collectors.toList());
+        product.setReviewCount(approvedReviews.size());
+        product.setAverageRating(approvedReviews.stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0));
+        productRepository.save(product);
+    }
+
+    private boolean isReturnEligible(ReturnRequest request) {
+        if (request.getOrder() == null || request.getStatus() == null) return false;
+        String orderStatus = request.getOrder().getOrderStatus();
+        return ("DELIVERED".equalsIgnoreCase(orderStatus) || "COMPLETED".equalsIgnoreCase(orderStatus))
+                && "REQUESTED".equalsIgnoreCase(request.getStatus());
+    }
+
+    @Transactional
+    public ReturnRequestDTO approveReturn(Long returnId, String reason) {
+        ReturnRequest request = returnRequestRepository.findById(returnId)
+                .orElseThrow(() -> new IllegalArgumentException("Return request not found"));
+        if (!isReturnEligible(request)) {
+            throw new IllegalStateException("Return request is not eligible for approval");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("An approval reason is required");
+        }
+        request.setStatus("APPROVED");
+        request.setDecisionReason(reason.trim());
+        request.setReviewedAt(LocalDateTime.now());
+        request.setReviewedBy(authenticationHelper.getCurrentUserId());
+        return new ReturnRequestDTO(returnRequestRepository.save(request));
+    }
+
+    @Transactional
+    public ReturnRequestDTO rejectReturn(Long returnId, String reason) {
+        ReturnRequest request = returnRequestRepository.findById(returnId)
+                .orElseThrow(() -> new IllegalArgumentException("Return request not found"));
+        if (!isReturnEligible(request)) {
+            throw new IllegalStateException("Return request is not pending or eligible for rejection");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A customer-visible rejection reason is required");
+        }
+        request.setStatus("REJECTED");
+        request.setDecisionReason(reason.trim());
+        request.setReviewedAt(LocalDateTime.now());
+        request.setReviewedBy(authenticationHelper.getCurrentUserId());
+        return new ReturnRequestDTO(returnRequestRepository.save(request));
+    }
+
+    @Transactional
+    public ReturnRequestDTO receiveReturn(Long returnId, String inspectionNotes) {
+        ReturnRequest request = returnRequestRepository.findById(returnId)
+                .orElseThrow(() -> new IllegalArgumentException("Return request not found"));
+        if (!"APPROVED".equalsIgnoreCase(request.getStatus())) {
+            throw new IllegalStateException("Only approved returns can be received");
+        }
+        if (request.getReceivedAt() != null) return new ReturnRequestDTO(request);
+        if (inspectionNotes == null || inspectionNotes.isBlank()) {
+            throw new IllegalArgumentException("Inspection notes are required");
+        }
+        request.setStatus("RECEIVED");
+        request.setInspectionNotes(inspectionNotes.trim());
+        request.setReceivedAt(LocalDateTime.now());
+        request.setReceivedBy(authenticationHelper.getCurrentUserId());
+        return new ReturnRequestDTO(returnRequestRepository.save(request));
+    }
+
+    @Transactional
+    public ReturnRequestDTO resolveReturn(Long returnId, String refundDecision, Double refundAmount, String reason) {
+        ReturnRequest request = returnRequestRepository.findById(returnId)
+                .orElseThrow(() -> new IllegalArgumentException("Return request not found"));
+        if (!"RECEIVED".equalsIgnoreCase(request.getStatus())) {
+            throw new IllegalStateException("Only received returns can be resolved");
+        }
+        if (refundDecision == null || !("REFUND".equalsIgnoreCase(refundDecision.trim())
+                || "NO_REFUND".equalsIgnoreCase(refundDecision.trim()))) {
+            throw new IllegalArgumentException("Refund decision must be REFUND or NO_REFUND");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A resolution reason is required");
+        }
+        double amount = refundAmount == null ? 0.0 : refundAmount;
+        if (amount < 0 || ("NO_REFUND".equalsIgnoreCase(refundDecision.trim()) && amount != 0.0)) {
+            throw new IllegalArgumentException("Refund amount is invalid for the selected decision");
+        }
+        request.setStatus("RESOLVED");
+        request.setRefundDecision(refundDecision.trim().toUpperCase(Locale.ROOT));
+        request.setRefundAmount(amount);
+        request.setDecisionReason(reason.trim());
+        request.setResolvedAt(LocalDateTime.now());
+        request.setResolvedBy(authenticationHelper.getCurrentUserId());
+        return new ReturnRequestDTO(returnRequestRepository.save(request));
+    }
+
+    @Transactional
+    public OrderDTO startFulfillment(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if ("CANCELLED".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new IllegalStateException("Cancelled orders cannot enter fulfillment");
+        }
+        if ("PICKING".equalsIgnoreCase(order.getOrderStatus())) {
+            return new OrderDTO(order);
+        }
+        if (!"PAID".equalsIgnoreCase(order.getPaymentStatus())
+                || !("PAID".equalsIgnoreCase(order.getOrderStatus())
+                || "CONFIRMED".equalsIgnoreCase(order.getOrderStatus()))) {
+            throw new IllegalStateException("Only paid or confirmed orders can enter fulfillment");
+        }
+        order.setOrderStatus("PICKING");
+        if (order.getStatusHistory() == null) order.setStatusHistory(new ArrayList<>());
+        order.getStatusHistory().add(new OrderStatusHistory(order, "PICKING", "Fulfillment started by staff"));
+        return new OrderDTO(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDTO packFulfillment(Long orderId, java.util.Map<Long, Integer> packedQuantities) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if ("PACKED".equalsIgnoreCase(order.getOrderStatus())) return new OrderDTO(order);
+        if (!"PICKING".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new IllegalStateException("Only picking orders can be packed");
+        }
+        if (order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
+            throw new IllegalStateException("An order must contain items before packing");
+        }
+        if (packedQuantities != null && !packedQuantities.isEmpty()
+                && packedQuantities.size() != order.getOrderItems().size()) {
+            throw new IllegalArgumentException("Partial shipments are not supported");
+        }
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getQuantity() < 1) {
+                throw new IllegalArgumentException("Every order item must have a positive quantity");
+            }
+            if (packedQuantities != null && !packedQuantities.isEmpty()
+                    && !Integer.valueOf(item.getQuantity()).equals(packedQuantities.get(item.getOrderItemId()))) {
+                throw new IllegalArgumentException("Packed quantities must match the full order");
+            }
+        }
+        order.setOrderStatus("PACKED");
+        if (order.getStatusHistory() == null) order.setStatusHistory(new ArrayList<>());
+        order.getStatusHistory().add(new OrderStatusHistory(order, "PACKED", "Full order packed by staff"));
+        return new OrderDTO(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDTO shipFulfillment(Long orderId, String carrier, String trackingNumber) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if ("SHIPPED".equalsIgnoreCase(order.getOrderStatus())) return new OrderDTO(order);
+        if (!"PACKED".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new IllegalStateException("Only packed orders can be shipped");
+        }
+        if (carrier == null || carrier.isBlank() || trackingNumber == null || trackingNumber.isBlank()) {
+            throw new IllegalArgumentException("Carrier and tracking number are required");
+        }
+        order.setShipmentCarrier(carrier.trim());
+        order.setTrackingNumber(trackingNumber.trim());
+        order.setShippedAt(LocalDateTime.now());
+        order.setOrderStatus("SHIPPED");
+        if (order.getStatusHistory() == null) order.setStatusHistory(new ArrayList<>());
+        order.getStatusHistory().add(new OrderStatusHistory(order, "SHIPPED",
+                "Shipment created with " + order.getShipmentCarrier() + " tracking " + order.getTrackingNumber()));
+        return new OrderDTO(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderDTO deliverFulfillment(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Order not found"));
+        if ("DELIVERED".equalsIgnoreCase(order.getOrderStatus())) return new OrderDTO(order);
+        if (!"SHIPPED".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new IllegalStateException("Only shipped orders can be delivered");
+        }
+        order.setOrderStatus("DELIVERED");
+        order.setDeliveredAt(LocalDateTime.now());
+        if (order.getStatusHistory() == null) order.setStatusHistory(new ArrayList<>());
+        order.getStatusHistory().add(new OrderStatusHistory(order, "DELIVERED", "Order delivered"));
+        Order saved = orderRepository.save(order);
+        String recipient = saved.getUser() != null ? saved.getUser().getEmail() : saved.getGuestEmail();
+        if (recipient != null && !recipient.isBlank()) {
+            emailService.sendOrderConfirmation(recipient, saved.getOrderId());
+        }
+        return new OrderDTO(saved);
+    }
+
+    public Page<OrderDTO> getAdminOrders(int page, int size, String status, String paymentStatus,
+                                         String customerEmail, LocalDate from, LocalDate to) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Page must be non-negative and size must be between 1 and 100");
+        }
+        String normalizedStatus = status == null ? null : status.trim().toUpperCase(Locale.ROOT);
+        String normalizedPaymentStatus = paymentStatus == null ? null : paymentStatus.trim().toUpperCase(Locale.ROOT);
+        String normalizedEmail = customerEmail == null ? null : customerEmail.trim().toLowerCase(Locale.ROOT);
+        List<Order> filtered = orderRepository.findAll().stream()
+                .filter(order -> normalizedStatus == null || normalizedStatus.isBlank()
+                        || normalizedStatus.equalsIgnoreCase(order.getOrderStatus()))
+                .filter(order -> normalizedPaymentStatus == null || normalizedPaymentStatus.isBlank()
+                        || normalizedPaymentStatus.equalsIgnoreCase(order.getPaymentStatus()))
+                .filter(order -> normalizedEmail == null || normalizedEmail.isBlank()
+                        || (order.getUser() != null && order.getUser().getEmail() != null
+                        && order.getUser().getEmail().toLowerCase(Locale.ROOT).contains(normalizedEmail)))
+                .filter(order -> from == null || (order.getOrderDate() != null && !order.getOrderDate().isBefore(from)))
+                .filter(order -> to == null || (order.getOrderDate() != null && !order.getOrderDate().isAfter(to)))
+                .sorted(java.util.Comparator.comparing(Order::getOrderDate,
+                        java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder()))
+                        .thenComparing(Order::getOrderId, java.util.Comparator.reverseOrder()))
+                .collect(Collectors.toList());
+        int start = Math.min(page * size, filtered.size());
+        int end = Math.min(start + size, filtered.size());
+        return new PageImpl<>(filtered.subList(start, end), PageRequest.of(page, size), filtered.size())
+                .map(OrderDTO::new);
     }
 
     public List<ProductDTO> getAllProductsForAdmin() {
