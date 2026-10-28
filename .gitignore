@@ -13,6 +13,7 @@ build/
 
 # Local prompt, documentation, and sample artifacts
 Single_Merchant_Ecommerce_Endpoint_By_Endpoint_Prompts.txt
+Single_Merchant_Ecommerce_Frontend_Integration_Prompts.txt
 Single_Merchant_Ecommerce_SRS.pdf
 order-payload.json
 response.json

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -20,6 +21,7 @@
     "@types/react": "19.2.18",
     "autoprefixer": "latest",
     "postcss": "latest",
+    "prettier": "^3.9.10",
     "tailwindcss": "latest",
     "typescript": "latest"
   }

@@ -1,45 +1,53 @@
-'use client'
-import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
+"use client";
+import React, { useState } from "react";
+import { ProductDTO } from "../../../../types/api";
+import { addGuestCartItem } from "../../../../lib/guestCart";
 
-import { ProductDTO } from '../../../../types/api'
+export default function ProductDetailsClient({
+  product,
+}: {
+  product: ProductDTO;
+}) {
+  const [skuIndex, setSkuIndex] = useState(0);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [status, setStatus] = useState<string | null>(null);
+  const sku = product.skuDTOs?.[skuIndex];
+  const inventory = sku?.inventoryDTOS?.[0];
+  const stockLeft = inventory?.stockAvailable ?? 0;
+  const maxQuantity = Math.max(1, stockLeft);
 
-export default function ProductDetailsClient({ product }: { product: ProductDTO }) {
-  const router = useRouter()
-  const [skuIndex, setSkuIndex] = useState(0)
-  const [quantity, setQuantity] = useState<number>(1)
-  const [status, setStatus] = useState<string | null>(null)
-  const sku = product.skuDTOs?.[skuIndex]
-  const inventory = sku?.inventoryDTOS?.[0]
-  const stockLeft = inventory?.stockAvailable ?? 0
-  const maxQuantity = Math.max(1, stockLeft)
-
-  const stockLabel = stockLeft > 0 ? `${stockLeft} left` : 'Sold out'
+  const stockLabel = stockLeft > 0 ? `${stockLeft} left` : "Sold out";
 
   function handleQuantityChange(nextQty: number) {
-    if (!inventory || stockLeft <= 0) return
-    setQuantity(Math.min(Math.max(1, nextQty), maxQuantity))
+    if (!inventory || stockLeft <= 0) return;
+    setQuantity(Math.min(Math.max(1, nextQty), maxQuantity));
   }
 
   async function addToCart() {
-    setStatus(null)
+    setStatus(null);
 
     if (!inventory || stockLeft <= 0) {
-      setStatus('This variant is currently sold out.')
-      return
+      setStatus("This variant is currently sold out.");
+      return;
     }
 
     try {
-      const res = await fetch('/api/cart', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ inventoryId: inventory?.inventoryId, quantity }) })
+      const res = await fetch("/api/cart", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ inventoryId: inventory?.inventoryId, quantity }),
+      });
       if (res.ok) {
-        setStatus('Added to cart successfully.')
-        setTimeout(() => router.push('/cart'), 400)
+        setStatus("Added to cart successfully.");
+      } else if (res.status === 401) {
+        addGuestCartItem({ inventoryId: inventory.inventoryId!, quantity, name: product.name, price: inventory.sellingPrice, variantLabel: `${sku?.size || ""}${sku?.color ? ` / ${sku.color}` : ""}` });
+        setStatus("Saved to your guest cart.");
       } else {
-        const txt = await res.text()
-        setStatus('Unable to add item: ' + (txt || 'Try again.'))
+        const txt = await res.text();
+        setStatus("Unable to add item: " + (txt || "Try again."));
       }
     } catch (e) {
-      setStatus('Network error while adding to cart.')
+      setStatus("Network error while adding to cart.");
     }
   }
 
@@ -50,15 +58,16 @@ export default function ProductDetailsClient({ product }: { product: ProductDTO 
         <div className="variant-list">
           {(product.skuDTOs ?? []).map((option, index) => (
             <button
-              key={`${option.size ?? 'size'}-${option.color ?? 'color'}-${index}`}
-              className={index === skuIndex ? 'selected' : ''}
+              key={`${option.size ?? "size"}-${option.color ?? "color"}-${index}`}
+              className={index === skuIndex ? "selected" : ""}
               onClick={() => {
-                setSkuIndex(index)
-                setStatus(null)
-                setQuantity(1)
+                setSkuIndex(index);
+                setStatus(null);
+                setQuantity(1);
               }}
             >
-              {option.size}{option.color ? ` / ${option.color}` : ''}
+              {option.size}
+              {option.color ? ` / ${option.color}` : ""}
             </button>
           ))}
         </div>
@@ -80,11 +89,15 @@ export default function ProductDetailsClient({ product }: { product: ProductDTO 
       </div>
 
       <div className="flex items-center justify-between text-sm mt-3">
-        <span className={stockLeft > 0 ? 'text-emerald-600' : 'text-red-500'}>{stockLabel}</span>
-        {inventory?.inventoryId ? <span className="muted">SKU #{inventory.inventoryId}</span> : null}
+        <span className={stockLeft > 0 ? "text-emerald-600" : "text-red-500"}>
+          {stockLabel}
+        </span>
+        {inventory?.inventoryId ? (
+          <span className="muted">SKU #{inventory.inventoryId}</span>
+        ) : null}
       </div>
 
       {status && <p className="status">{status}</p>}
     </div>
-  )
+  );
 }

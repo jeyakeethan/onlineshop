@@ -1,54 +1,102 @@
-'use client'
-import React, { useEffect, useMemo, useState } from 'react'
-import { ProductDTO } from '../../types/api'
-import { ProductGrid } from '../../components/storefront'
+"use client";
 
-const DEFAULT_CATEGORIES = ['All', 'Home', 'Office', 'Living', 'Accessories']
+import React, { useEffect, useState } from "react";
+import { ProductDTO } from "../../types/api";
+import { ProductGrid } from "../../components/storefront";
+
+type FilterOption = { category?: string; subcategory?: string; slug?: string };
+type BrandOption = { name?: string; slug?: string };
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<ProductDTO[]>([])
-  const [keyword, setKeyword] = useState('')
-  const [category, setCategory] = useState('All')
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState<ProductDTO[]>([]);
+  const [categories, setCategories] = useState<FilterOption[]>([]);
+  const [brands, setBrands] = useState<BrandOption[]>([]);
+  const [keyword, setKeyword] = useState("");
+  const [category, setCategory] = useState("");
+  const [brand, setBrand] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  async function loadProducts(nextKeyword = keyword, nextCategory = category) {
-    setLoading(true)
+  async function loadProducts(
+    nextKeyword = keyword,
+    nextCategory = category,
+    nextBrand = brand,
+  ) {
+    setLoading(true);
+    setError(null);
     try {
-      const normalizedKeyword = (nextKeyword || '').trim()
-      const normalizedCategory = (nextCategory || 'All').trim()
-
-      let url = '/api/bff/products'
-      if (normalizedCategory !== 'All' || normalizedKeyword) {
-        if (normalizedCategory === 'All') {
-          url = `/api/bff/products/search?keyword=${encodeURIComponent(normalizedKeyword)}`
-        } else {
-          url = `/api/bff/products/filter?category=${encodeURIComponent(normalizedCategory)}&keyword=${encodeURIComponent(normalizedKeyword)}`
-        }
-      }
-
-      const res = await fetch(url, { cache: 'no-store' })
-      if (!res.ok) throw new Error('Failed to fetch products')
-      const data = await res.json()
-      setProducts(Array.isArray(data) ? data : [])
-    } catch {
-      setProducts([])
+      const normalizedKeyword = nextKeyword.trim();
+      const params = new URLSearchParams();
+      if (nextCategory) params.set("category", nextCategory);
+      if (nextBrand) params.set("brand", nextBrand);
+      params.set("sort", "featured");
+      let url = `/api/bff/products?${params.toString()}`;
+      if (normalizedKeyword)
+        url = `/api/bff/search?q=${encodeURIComponent(normalizedKeyword)}`;
+      const response = await fetch(url, { cache: "no-store" });
+      const data = await response.json().catch(() => []);
+      if (!response.ok)
+        throw new Error(data?.message || "Unable to load products.");
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (reason) {
+      setProducts([]);
+      setError(
+        reason instanceof Error ? reason.message : "Unable to load products.",
+      );
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadProducts()
-  }, [])
+    const params = new URLSearchParams(window.location.search);
+    const initialCategory = params.get("category") || "";
+    const initialBrand = params.get("brand") || "";
+    setCategory(initialCategory);
+    setBrand(initialBrand);
+    Promise.all([
+      fetch("/api/bff/categories", { cache: "no-store" }).then((response) =>
+        response.ok ? response.json() : [],
+      ),
+      fetch("/api/bff/brands", { cache: "no-store" }).then((response) =>
+        response.ok ? response.json() : [],
+      ),
+    ])
+      .then(([categoryData, brandData]) => {
+        setCategories(Array.isArray(categoryData) ? categoryData : []);
+        setBrands(Array.isArray(brandData) ? brandData : []);
+      })
+      .catch(() => undefined);
+    loadProducts("", initialCategory, initialBrand);
+  }, []);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      loadProducts(keyword, category)
-    }, 250)
-    return () => clearTimeout(timeout)
-  }, [keyword, category])
+    const timeout = setTimeout(
+      () => loadProducts(keyword, category, brand),
+      250,
+    );
+    return () => clearTimeout(timeout);
+  }, [keyword, category, brand]);
 
-  const activeCount = useMemo(() => products.length, [products])
+  useEffect(() => {
+    const query = keyword.trim();
+    if (query.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      fetch(`/api/bff/search/suggestions?query=${encodeURIComponent(query)}`, {
+        cache: "no-store",
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => []);
+          setSuggestions(response.ok && Array.isArray(data) ? data : []);
+        })
+        .catch(() => setSuggestions([]));
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [keyword]);
 
   return (
     <div className="page-container">
@@ -58,31 +106,72 @@ export default function ProductsPage() {
           <h1>Products</h1>
         </div>
       </div>
-
       <div className="catalog-tools">
         <label className="search">
-          <span>⌕</span>
-          <input value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="Search products" />
+          <span aria-hidden="true">⌕</span>
+          <input
+            list="product-search-suggestions"
+            aria-label="Search products"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="Search products"
+          />
+          <datalist id="product-search-suggestions">
+            {suggestions.map((suggestion) => (
+              <option key={suggestion} value={suggestion} />
+            ))}
+          </datalist>
         </label>
         <div className="filters">
-          {DEFAULT_CATEGORIES.map((item) => (
-            <button
-              key={item}
-              className={item === category ? 'active' : ''}
-              onClick={() => setCategory(item)}
-              type="button"
-            >
-              {item}
-            </button>
-          ))}
+          <select
+            aria-label="Filter by category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="">All categories</option>
+            {categories.map((item) => (
+              <option
+                key={item.slug || `${item.category}-${item.subcategory}`}
+                value={item.subcategory || item.category || ""}
+              >
+                {item.subcategory || item.category}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Filter by brand"
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
+          >
+            <option value="">All brands</option>
+            {brands.map((item) => (
+              <option
+                key={item.slug || item.name}
+                value={item.name || item.slug || ""}
+              >
+                {item.name || item.slug}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
-
-      <p className="muted" style={{ marginBottom: '1rem' }}>
-        {loading ? 'Loading products...' : `${activeCount} item${activeCount === 1 ? '' : 's'} found`}
+      <p className="muted" style={{ marginBottom: "1rem" }}>
+        {loading
+          ? "Loading products..."
+          : `${products.length} item${products.length === 1 ? "" : "s"} found`}
       </p>
-
-      {products.length ? <ProductGrid products={products} /> : !loading ? <div className="empty"><h2>No products match your search.</h2></div> : null}
+      {error ? (
+        <div role="alert" className="empty">
+          <h2>Products unavailable</h2>
+          <p>{error}</p>
+        </div>
+      ) : products.length ? (
+        <ProductGrid products={products} />
+      ) : !loading ? (
+        <div className="empty">
+          <h2>No products match your filters.</h2>
+        </div>
+      ) : null}
     </div>
-  )
+  );
 }

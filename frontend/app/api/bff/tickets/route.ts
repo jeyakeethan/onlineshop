@@ -1,0 +1,84 @@
+const BACKEND = process.env.BACKEND_BASE_URL!;
+export async function GET(req: Request) {
+  const incoming = new URL(req.url);
+  const query = new URLSearchParams({
+    page: incoming.searchParams.get("page") || "0",
+    size: incoming.searchParams.get("size") || "20",
+  });
+  const headers: Record<string, string> = {};
+  const cookie = req.headers.get("cookie");
+  const authorization = req.headers.get("authorization");
+  if (cookie) headers.cookie = cookie;
+  if (authorization) headers.authorization = authorization;
+  try {
+    const response = await fetch(`${BACKEND}/api/v1/tickets?${query}`, {
+      headers,
+      cache: "no-store",
+    });
+    return new Response(await response.text(), {
+      status: response.status,
+      headers: {
+        "content-type":
+          response.headers.get("content-type") || "application/json",
+        "cache-control": "no-store",
+      },
+    });
+  } catch {
+    return Response.json(
+      { message: "Unable to load tickets." },
+      { status: 502 },
+    );
+  }
+}
+
+export async function POST(req: Request) {
+  const body = await req.text();
+  try {
+    const payload = JSON.parse(body);
+    if (
+      !payload.subject?.trim() ||
+      (payload.description || "").trim().length < 10 ||
+      (payload.description || "").length > 5000
+    )
+      return Response.json(
+        {
+          message:
+            "Subject and a description between 10 and 5000 characters are required.",
+        },
+        { status: 400 },
+      );
+  } catch {
+    return Response.json(
+      { message: "Invalid ticket request." },
+      { status: 400 },
+    );
+  }
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+  };
+  const cookie = req.headers.get("cookie");
+  const authorization = req.headers.get("authorization");
+  if (cookie) headers.cookie = cookie;
+  if (authorization) headers.authorization = authorization;
+  try {
+    const response = await fetch(`${BACKEND}/api/v1/tickets`, {
+      method: "POST",
+      headers,
+      body,
+      cache: "no-store",
+    });
+    return new Response(await response.text(), {
+      status: response.status,
+      headers: {
+        "content-type":
+          response.headers.get("content-type") || "application/json",
+        "cache-control": "no-store",
+      },
+    });
+  } catch {
+    return Response.json(
+      { message: "Unable to create ticket." },
+      { status: 502 },
+    );
+  }
+}

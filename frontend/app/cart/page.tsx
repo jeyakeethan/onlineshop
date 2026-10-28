@@ -1,71 +1,29 @@
-'use client'
-import React, { useEffect, useState } from 'react'
-import { CartDTO } from '../../types/api'
-import { formatMoney } from '../../lib/storefront'
+"use client";
+
+import { useEffect, useState } from "react";
+import { CartDTO, CartItemDTO } from "../../types/api";
+import { formatMoney } from "../../lib/storefront";
+import { clearGuestCart, guestCartToken, onGuestCartChange, readGuestCart, removeGuestCartItem, updateGuestCartItem, GuestCartItem } from "../../lib/guestCart";
+
+function guestAsCart(items: GuestCartItem[]): CartDTO { return { cartItems: items.map((item, index) => ({ cartItemId: -(index + 1), inventoryId: item.inventoryId, quantity: item.quantity, priceAtAdd: item.price || 0 })) }; }
 
 export default function CartPage() {
-  const [cart, setCart] = useState<CartDTO | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [cart, setCart] = useState<CartDTO | null>(null); const [guestItems, setGuestItems] = useState<GuestCartItem[]>([]); const [accountCart, setAccountCart] = useState<CartDTO | null>(null); const [authenticated, setAuthenticated] = useState(false); const [savedChoice, setSavedChoice] = useState(false); const [loading, setLoading] = useState(true); const [merging, setMerging] = useState(false); const [error, setError] = useState<string | null>(null); const [removingId, setRemovingId] = useState<number | null>(null); const [clearing, setClearing] = useState(false);
 
   async function load() {
-    setLoading(true)
-    setError(null)
-    try {
-      const r = await fetch('/api/cart')
-      if (r.ok) setCart(await r.json())
-      else setError('We could not load your cart.')
-    } catch (e) {
-      setError('We could not load your cart.')
-    } finally { setLoading(false) }
+    setLoading(true); setError(null); const local = readGuestCart(); setGuestItems(local);
+    try { const response = await fetch("/api/cart", { cache: "no-store" }); if (response.status === 401) { setAuthenticated(false); setAccountCart(null); setCart(guestAsCart(local)); return; } if (!response.ok) throw new Error("We could not load your cart."); const data = await response.json() as CartDTO; setAuthenticated(true); setAccountCart(data); if (local.length && !(data.cartItems?.length)) { await mergeSaved(local); } else { setCart(data); } } catch (reason) { setError(reason instanceof Error ? reason.message : "We could not load your cart."); setCart(guestAsCart(local)); } finally { setLoading(false); }
   }
 
-  useEffect(() => { load() }, [])
+  async function mergeSaved(items: GuestCartItem[]) { if (merging || !items.length) return; setMerging(true); try { const response = await fetch("/api/cart/merge", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ guestCartToken: guestCartToken(), items: items.map((item) => ({ inventoryId: item.inventoryId, quantity: item.quantity })) }) }); const data = await response.json().catch(() => ({})); if (!response.ok) throw new Error(data?.message || "Saved items could not be merged."); clearGuestCart(); setGuestItems([]); const refreshed = await fetch("/api/cart", { cache: "no-store" }); setCart(refreshed.ok ? await refreshed.json() : { cartItems: [] }); } catch (reason) { setError(reason instanceof Error ? reason.message : "Saved items were preserved but could not be merged."); setCart(accountCart || guestAsCart(items)); } finally { setMerging(false); } }
 
-  async function removeItem(inventoryId?: number) {
-    if (!inventoryId) return
-    const response = await fetch(`/api/cart/items/${inventoryId}`, { method: 'DELETE' })
-    if (!response.ok) setError('We could not remove that item.')
-    await load()
-  }
+  useEffect(() => { load(); return onGuestCartChange(() => { const items = readGuestCart(); setGuestItems(items); if (!authenticated) setCart(guestAsCart(items)); }); }, []);
 
-  async function updateItem(inventoryId?: number, qty = 1) {
-    if (!inventoryId) return
-    const response = await fetch(`/api/cart/items/${inventoryId}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ inventoryId, quantity: qty }) })
-    if (!response.ok) setError('That quantity is not available.')
-    await load()
-  }
+  async function removeItem(item: CartItemDTO) { if (!item.inventoryId || removingId || !window.confirm("Remove this item from your cart?")) return; setRemovingId(item.inventoryId); try { if (!authenticated) { removeGuestCartItem(item.inventoryId); setGuestItems(readGuestCart()); setCart(guestAsCart(readGuestCart())); } else { const response = await fetch(`/api/cart/items/${item.cartItemId || item.inventoryId}`, { method: "DELETE" }); if (!response.ok) throw new Error("We could not remove that item."); await load(); } } catch (reason) { setError(reason instanceof Error ? reason.message : "We could not remove that item."); } finally { setRemovingId(null); } }
+  async function updateItem(item: CartItemDTO, quantity: number) { if (!item.inventoryId) return; try { if (!authenticated) { updateGuestCartItem(item.inventoryId, quantity); setCart(guestAsCart(readGuestCart())); } else { const response = await fetch(`/api/cart/items/${item.cartItemId || item.inventoryId}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ quantity }) }); if (!response.ok) throw new Error("That quantity is not available."); await load(); } } catch (reason) { setError(reason instanceof Error ? reason.message : "That quantity is not available."); } }
+  async function clearCart() { if (clearing || !window.confirm("Clear every item from your cart?")) return; setClearing(true); try { if (!authenticated) { clearGuestCart(); setGuestItems([]); setCart(guestAsCart([])); } else { const response = await fetch("/api/cart", { method: "DELETE" }); if (!response.ok) throw new Error("We could not clear your cart."); await load(); } } catch (reason) { setError(reason instanceof Error ? reason.message : "We could not clear your cart."); } finally { setClearing(false); } }
 
-  const items = cart?.cartItems ?? []
-  const itemCount = items.reduce((total, item) => total + (item.quantity || 0), 0)
-  const subtotal = items.reduce((total, item) => total + (item.priceAtAdd || 0) * (item.quantity || 0), 0)
-  const shipping = subtotal > 0 ? 0 : 0
-  const total = subtotal + shipping
-
-  if (loading && !cart) return <div className="page-container"><div className="empty">Loading your cart...</div></div>
-  return (
-    <div className="page-container">
-      <div className="page-heading"><div><p className="eyebrow">Your selection</p><h1>Cart</h1></div>{cart?.cartItems?.length ? <button className="text-button" onClick={() => fetch('/api/cart', { method: 'DELETE' }).then(load)}>Clear cart</button> : null}</div>
-      {error && <p className="form-error">{error}</p>}
-      {items.length ? (
-        <div className="cart-layout"><ul className="cart-list">
-          {items.map((it) => (
-            <li key={it.cartItemId} className="cart-item">
-              <div>
-                <div className="eyebrow">Inventory #{it.inventoryId}</div>
-                <h3>Selected item</h3>
-                <div className="muted">{formatMoney(it.priceAtAdd || 0)} each</div>
-              </div>
-              <div className="cart-line-actions"><strong>{formatMoney((it.priceAtAdd || 0) * (it.quantity || 0))}</strong>
-                <div className="stepper"><button onClick={() => updateItem(it.inventoryId, Math.max(1, (it.quantity || 1) - 1))}>-</button><span>{it.quantity}</span><button onClick={() => updateItem(it.inventoryId, (it.quantity || 1) + 1)}>+</button></div>
-                <button onClick={() => removeItem(it.inventoryId)} className="text-button">Remove</button>
-              </div>
-            </li>
-          ))}
-        </ul><aside className="summary"><p className="eyebrow">Order review</p><div className="summary-line"><span>Items ({itemCount})</span><strong>{formatMoney(subtotal)}</strong></div><div className="summary-line"><span>Shipping</span><strong>{shipping ? formatMoney(shipping) : 'Free'}</strong></div><div className="summary-line summary-total"><span>Total</span><strong>{formatMoney(total)}</strong></div><a href="/checkout" className="primary-button">Continue to checkout</a></aside></div>
-      ) : (
-        <div className="empty"><h2>Your cart is empty.</h2><p className="muted">Find something considered for your everyday.</p><a href="/products" className="primary-button">Continue shopping</a></div>
-      )}
-    </div>
-  )
+  const items = cart?.cartItems || []; const saved = authenticated && guestItems.length && accountCart?.cartItems?.length && !savedChoice ? guestItems : []; const itemCount = items.reduce((sum, item) => sum + (item.quantity || 0), 0); const subtotal = items.reduce((sum, item) => sum + (item.priceAtAdd || 0) * (item.quantity || 0), 0);
+  if (loading && !cart) return <div className="page-container"><div className="empty">Loading your cart...</div></div>;
+  return <div className="page-container"><div className="page-heading"><div><p className="eyebrow">Your selection</p><h1>Cart</h1></div>{items.length ? <button className="text-button" disabled={clearing} onClick={clearCart}>{clearing ? "Clearing..." : "Clear cart"}</button> : null}</div>{error && <p role="alert" className="form-error">{error}</p>}{saved.length ? <section className="account-card"><h2>Items saved before logging in</h2>{saved.map((item) => <p key={item.inventoryId}>{item.name || `Inventory #${item.inventoryId}`} · Qty: {item.quantity} · {formatMoney(item.price || 0)}</p>)}<button className="primary-button" disabled={merging} onClick={() => mergeSaved(saved)}>{merging ? "Adding..." : "Add these items to my cart"}</button><button className="back-link" onClick={() => { clearGuestCart(); setGuestItems([]); setSavedChoice(true); }}>Discard saved items</button></section> : null}{items.length ? <div className="cart-layout"><ul className="cart-list">{items.map((item) => <li key={item.cartItemId} className="cart-item"><div><div className="eyebrow">Inventory #{item.inventoryId}</div><h3>{authenticated ? "Selected item" : (guestItems.find((savedItem) => savedItem.inventoryId === item.inventoryId)?.name || "Guest item")}</h3><div className="muted">{formatMoney(item.priceAtAdd || 0)} each</div></div><div className="cart-line-actions"><strong>{formatMoney((item.priceAtAdd || 0) * (item.quantity || 0))}</strong><div className="stepper"><button onClick={() => updateItem(item, Math.max(1, (item.quantity || 1) - 1))}>-</button><span>{item.quantity}</span><button onClick={() => updateItem(item, Math.min(10, (item.quantity || 1) + 1))}>+</button></div><button onClick={() => removeItem(item)} disabled={removingId === item.inventoryId} className="text-button">{removingId === item.inventoryId ? "Removing..." : "Remove"}</button></div></li>)}</ul><aside className="summary"><p className="eyebrow">Order review</p><div className="summary-line"><span>Items ({itemCount})</span><strong>{formatMoney(subtotal)}</strong></div><div className="summary-line summary-total"><span>Estimated total</span><strong>{formatMoney(subtotal)}</strong></div><a href="/checkout" className="primary-button">Continue to checkout</a></aside></div> : <div className="empty"><h2>Your cart is empty.</h2><a href="/products" className="primary-button">Continue shopping</a></div>}</div>;
 }
